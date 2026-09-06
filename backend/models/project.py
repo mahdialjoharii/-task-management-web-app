@@ -1,4 +1,6 @@
 from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+
 from database.database import Base
 
 
@@ -13,3 +15,6 @@ class Project(Base):
         ForeignKey("users.id"),
         nullable=False
     )
+
+    owner = relationship("User", back_populates="projects")
+    tasks = relationship("Task", back_populates="project")

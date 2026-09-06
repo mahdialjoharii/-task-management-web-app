@@ -1,4 +1,6 @@
 from sqlalchemy import Column, Date, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+
 from database.database import Base
 
 
@@ -22,3 +24,6 @@ class Task(Base):
 
     status = Column(String, nullable=False, default="TODO")
     due_date = Column(Date, nullable=True)
+
+    project = relationship("Project", back_populates="tasks")
+    owner = relationship("User", back_populates="tasks")
