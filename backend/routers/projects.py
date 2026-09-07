@@ -4,21 +4,20 @@ from sqlalchemy.orm import Session
 
 from dependencies import get_db
 from models import project
-from schemas.project import ProjectCreate
-
+from schemas.project import ProjectCreate, ProjectResponse
 router = APIRouter(
     prefix="/projects",
     tags=["Projects"]
 )
 
 
-@router.get("/")
+@router.get("/", response_model=list[ProjectResponse])
 def get_projects(db: Session = Depends(get_db)):
     projects = db.query(project.Project).all()
     return projects
 
 
-@router.post("/")
+@router.post("/", response_model=ProjectResponse)
 def create_project(
     project_data: ProjectCreate,
     db: Session = Depends(get_db)
@@ -42,7 +41,7 @@ def create_project(
     return new_project
 
 
-@router.put("/{project_id}")
+@router.put("/{project_id}", response_model=ProjectResponse)
 def update_project(
     project_id: int,
     project_data: ProjectCreate,
