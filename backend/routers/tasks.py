@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from dependencies import get_db
-from models import task
+from models import task, project, user
 from schemas.task import TaskCreate, TaskUpdate, TaskResponse
 
 router = APIRouter(
@@ -12,6 +12,25 @@ router = APIRouter(
 
 @router.post("/", response_model=TaskResponse)
 def create_task(task_data: TaskCreate, db: Session = Depends(get_db)):
+
+    existing_project = db.query(project.Project).filter(
+    project.Project.id == task_data.project_id
+).first()
+
+    if existing_project is None:
+     raise HTTPException(
+        status_code=400,
+        detail="Project does not exist"
+    )
+    existing_user = db.query(user.User).filter(
+    user.User.id == task_data.user_id
+).first()
+
+    if existing_user is None:
+     raise HTTPException(
+        status_code=400,
+        detail="User does not exist"
+    )
     new_task = task.Task(
         name=task_data.name,
         project_id=task_data.project_id,
