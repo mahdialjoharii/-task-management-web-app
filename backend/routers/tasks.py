@@ -3,15 +3,14 @@ from sqlalchemy.orm import Session
 
 from dependencies import get_db
 from models import task
-from schemas.task import TaskCreate, TaskUpdate
-
+from schemas.task import TaskCreate, TaskUpdate, TaskResponse
 
 router = APIRouter(
     prefix="/tasks",
     tags=["Tasks"]
 )
 
-@router.post("/")
+@router.post("/", response_model=TaskResponse)
 def create_task(task_data: TaskCreate, db: Session = Depends(get_db)):
     new_task = task.Task(
         name=task_data.name,
@@ -28,13 +27,13 @@ def create_task(task_data: TaskCreate, db: Session = Depends(get_db)):
     return new_task
 
 
-@router.get("/")
+@router.get("/", response_model=list[TaskResponse])
 def get_tasks(db: Session = Depends(get_db)):
     tasks = db.query(task.Task).all()
     return tasks
 
 
-@router.put("/{task_id}")
+@router.put("/{task_id}", response_model=TaskResponse)
 def update_task(
     task_id: int,
     task_data: TaskUpdate,

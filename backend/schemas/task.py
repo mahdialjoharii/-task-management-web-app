@@ -14,4 +14,12 @@ class TaskCreate(BaseModel):
 class TaskUpdate(BaseModel):
     name: str | None = None
     status: str | None = None
-    due_date: date | None = None    
+    due_date: date | None = None 
+
+class TaskResponse(BaseModel):
+    id: int
+    name: str
+    project_id: int
+    user_id: int
+    status: str
+    due_date: date | None = None       
