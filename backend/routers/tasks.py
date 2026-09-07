@@ -63,7 +63,10 @@ def update_task(
     ).first()
 
     if existing_task is None:
-        return {"message": "Task not found"}
+     raise HTTPException(
+        status_code=404,
+        detail="Task not found"
+    )
 
     if task_data.name is not None:
         existing_task.name = task_data.name
@@ -87,7 +90,10 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     ).first()
 
     if existing_task is None:
-        return {"message": "Task not found"}
+     raise HTTPException(
+        status_code=404,
+        detail="Task not found"
+    )
 
     db.delete(existing_task)
     db.commit()
