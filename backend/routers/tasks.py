@@ -74,7 +74,7 @@ def update_task(
     if task_data.status is not None:
         existing_task.status = task_data.status
 
-    if task_data.due_date is not None:
+    if "due_date" in task_data.model_fields_set:
         existing_task.due_date = task_data.due_date
 
     db.commit()
