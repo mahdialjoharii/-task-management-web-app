@@ -31,6 +31,11 @@ def create_task(task_data: TaskCreate, db: Session = Depends(get_db)):
         status_code=400,
         detail="User does not exist"
     )
+    if existing_project.user_id != task_data.user_id:
+       raise HTTPException(
+        status_code=400,
+        detail="User does not own this project"
+    )
     new_task = task.Task(
         name=task_data.name,
         project_id=task_data.project_id,
