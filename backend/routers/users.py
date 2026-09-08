@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from dependencies import get_db
 from models import user
-from schemas.user import UserCreate, UserResponse, LoginRequest
+from schemas.user import UserCreate, UserResponse
 from auth import hash_password,verify_password, create_access_token, get_current_user
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -13,7 +13,10 @@ router = APIRouter(
 
 
 @router.get("/", response_model=list[UserResponse])
-def get_users(db: Session = Depends(get_db)):
+def get_users(
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
     users = db.query(user.User).all()
     return users
 
@@ -77,4 +80,10 @@ def login(
 def get_me(user_id: int = Depends(get_current_user)):
     return {
         "user_id": user_id
+    }
+
+@router.post("/logout")
+def logout(user_id: int = Depends(get_current_user)):
+    return {
+        "message": "Logged out successfully"
     }

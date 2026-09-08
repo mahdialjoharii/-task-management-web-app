@@ -11,6 +11,7 @@ class TaskStatus(str, Enum):
 class TaskCreate(BaseModel):
     name: str
     project_id: int
+    assigned_user_id: int
     status: TaskStatus = TaskStatus.TODO
     due_date: date | None = None
 

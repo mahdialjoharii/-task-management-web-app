@@ -26,14 +26,14 @@ def create_task(
         status_code=400,
         detail="Project does not exist"
     )
-    existing_user = db.query(user.User).filter(
-    user.User.id == user_id
+    assigned_user = db.query(user.User).filter(
+    user.User.id == task_data.assigned_user_id
 ).first()
 
-    if existing_user is None:
+    if assigned_user is None:
      raise HTTPException(
         status_code=400,
-        detail="User does not exist"
+        detail="Assigned user does not exist"
     )
     if existing_project.user_id != user_id:
        raise HTTPException(
@@ -43,7 +43,7 @@ def create_task(
     new_task = task.Task(
         name=task_data.name,
         project_id=task_data.project_id,
-        user_id=user_id,
+       user_id=task_data.assigned_user_id,
         status=task_data.status,
         due_date=task_data.due_date
     )
@@ -65,9 +65,14 @@ def get_tasks(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user)
 ):
+    owned_project_ids = db.query(project.Project.id).filter(
+    project.Project.user_id == user_id
+).subquery()
+
     tasks_query = db.query(task.Task).filter(
-        task.Task.user_id == user_id
-    )
+      (task.Task.user_id == user_id) |
+      (task.Task.project_id.in_(owned_project_ids))
+)
 
     if status is not None:
         tasks_query = tasks_query.filter(
@@ -89,9 +94,9 @@ def get_tasks(
         tasks_query = tasks_query.order_by(
             task.Task.due_date.desc()
         )
-    else:
+     else:
         tasks_query = tasks_query.order_by(
-            task.Task.due_date
+            task.Task.due_date.asc()
         )
     return tasks_query.all()
 
@@ -103,9 +108,13 @@ def update_task(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user)
 ):
-    existing_task = db.query(task.Task).filter(
-    task.Task.id == task_id,
-    task.Task.user_id == user_id
+    existing_task = db.query(task.Task).join(
+     project.Project,
+     task.Task.project_id == project.Project.id
+).filter(
+     task.Task.id == task_id,
+     (task.Task.user_id == user_id) |
+     (project.Project.user_id == user_id)
 ).first()
 
     if existing_task is None:
@@ -135,9 +144,13 @@ def delete_task(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user)
 ):
-    existing_task = db.query(task.Task).filter(
-    task.Task.id == task_id,
-    task.Task.user_id == user_id
+    existing_task = db.query(task.Task).join(
+     project.Project,
+     task.Task.project_id == project.Project.id
+).filter(
+     task.Task.id == task_id,
+     (task.Task.user_id == user_id) |
+     (project.Project.user_id == user_id)
 ).first()
     
     if existing_task is None:
