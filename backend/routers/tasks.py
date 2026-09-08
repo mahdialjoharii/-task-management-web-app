@@ -60,6 +60,8 @@ def get_tasks(
     status: str | None = None,
     project_id: int | None = None,
     name: str | None = None,
+    sort_by_due_date: bool = False,
+    sort_desc: bool = False,
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user)
 ):
@@ -82,6 +84,15 @@ def get_tasks(
             task.Task.name.contains(name)
         )
 
+    if sort_by_due_date:
+     if sort_desc:
+        tasks_query = tasks_query.order_by(
+            task.Task.due_date.desc()
+        )
+    else:
+        tasks_query = tasks_query.order_by(
+            task.Task.due_date
+        )
     return tasks_query.all()
 
 
