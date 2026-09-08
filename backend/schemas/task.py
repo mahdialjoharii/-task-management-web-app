@@ -6,7 +6,6 @@ from pydantic import BaseModel
 class TaskCreate(BaseModel):
     name: str
     project_id: int
-    user_id: int
     status: str = "TODO"
     due_date: date | None = None
 

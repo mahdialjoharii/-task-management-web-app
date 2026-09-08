@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-
 from dependencies import get_db
-from models import project
+from models import project, task
 from schemas.project import ProjectCreate, ProjectResponse
+from auth import get_current_user
+
 router = APIRouter(
     prefix="/projects",
     tags=["Projects"]
@@ -12,19 +13,26 @@ router = APIRouter(
 
 
 @router.get("/", response_model=list[ProjectResponse])
-def get_projects(db: Session = Depends(get_db)):
-    projects = db.query(project.Project).all()
+def get_projects(
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
+    projects = db.query(project.Project).filter(
+     project.Project.user_id == user_id
+).all()
     return projects
 
 
 @router.post("/", response_model=ProjectResponse)
 def create_project(
     project_data: ProjectCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user)
 ):
+    
     new_project = project.Project(
         project_name=project_data.project_name,
-        user_id=project_data.user_id
+        user_id=user_id
     )
 
     try:
@@ -45,10 +53,12 @@ def create_project(
 def update_project(
     project_id: int,
     project_data: ProjectCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user)
 ):
     existing_project = db.query(project.Project).filter(
-        project.Project.id == project_id
+        project.Project.id == project_id,
+        project.Project.user_id == user_id
     ).first()
 
     if existing_project is None:
@@ -58,7 +68,7 @@ def update_project(
         )
 
     existing_project.project_name = project_data.project_name
-    existing_project.user_id = project_data.user_id
+    
 
     try:
         db.commit()
@@ -76,18 +86,22 @@ def update_project(
 @router.delete("/{project_id}")
 def delete_project(
     project_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user)
 ):
     existing_project = db.query(project.Project).filter(
-        project.Project.id == project_id
-    ).first()
+      project.Project.id == project_id,
+      project.Project.user_id == user_id
+).first()
 
     if existing_project is None:
         raise HTTPException(
             status_code=404,
             detail="Project not found"
         )
-
+    db.query(task.Task).filter(
+    task.Task.project_id == project_id
+).delete()
     db.delete(existing_project)
     db.commit()
 

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
 from dependencies import get_db
 from models import task, project, user
 from schemas.task import TaskCreate, TaskUpdate, TaskResponse
+from auth import get_current_user
 
 router = APIRouter(
     prefix="/tasks",
@@ -11,7 +11,11 @@ router = APIRouter(
 )
 
 @router.post("/", response_model=TaskResponse)
-def create_task(task_data: TaskCreate, db: Session = Depends(get_db)):
+def create_task(
+    task_data: TaskCreate,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
 
     existing_project = db.query(project.Project).filter(
     project.Project.id == task_data.project_id
@@ -23,7 +27,7 @@ def create_task(task_data: TaskCreate, db: Session = Depends(get_db)):
         detail="Project does not exist"
     )
     existing_user = db.query(user.User).filter(
-    user.User.id == task_data.user_id
+    user.User.id == user_id
 ).first()
 
     if existing_user is None:
@@ -31,7 +35,7 @@ def create_task(task_data: TaskCreate, db: Session = Depends(get_db)):
         status_code=400,
         detail="User does not exist"
     )
-    if existing_project.user_id != task_data.user_id:
+    if existing_project.user_id != user_id:
        raise HTTPException(
         status_code=400,
         detail="User does not own this project"
@@ -39,7 +43,7 @@ def create_task(task_data: TaskCreate, db: Session = Depends(get_db)):
     new_task = task.Task(
         name=task_data.name,
         project_id=task_data.project_id,
-        user_id=task_data.user_id,
+        user_id=user_id,
         status=task_data.status,
         due_date=task_data.due_date
     )
@@ -52,8 +56,14 @@ def create_task(task_data: TaskCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=list[TaskResponse])
-def get_tasks(db: Session = Depends(get_db)):
-    tasks = db.query(task.Task).all()
+def get_tasks(
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
+    tasks = db.query(task.Task).filter(
+        task.Task.user_id == user_id
+    ).all()
+
     return tasks
 
 
@@ -61,11 +71,13 @@ def get_tasks(db: Session = Depends(get_db)):
 def update_task(
     task_id: int,
     task_data: TaskUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user)
 ):
     existing_task = db.query(task.Task).filter(
-        task.Task.id == task_id
-    ).first()
+    task.Task.id == task_id,
+    task.Task.user_id == user_id
+).first()
 
     if existing_task is None:
      raise HTTPException(
@@ -89,11 +101,16 @@ def update_task(
 
 
 @router.delete("/{task_id}")
-def delete_task(task_id: int, db: Session = Depends(get_db)):
+def delete_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
     existing_task = db.query(task.Task).filter(
-        task.Task.id == task_id
-    ).first()
-
+    task.Task.id == task_id,
+    task.Task.user_id == user_id
+).first()
+    
     if existing_task is None:
      raise HTTPException(
         status_code=404,
