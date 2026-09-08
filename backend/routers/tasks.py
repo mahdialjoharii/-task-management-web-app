@@ -57,14 +57,32 @@ def create_task(
 
 @router.get("/", response_model=list[TaskResponse])
 def get_tasks(
+    status: str | None = None,
+    project_id: int | None = None,
+    name: str | None = None,
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user)
 ):
-    tasks = db.query(task.Task).filter(
+    tasks_query = db.query(task.Task).filter(
         task.Task.user_id == user_id
-    ).all()
+    )
 
-    return tasks
+    if status is not None:
+        tasks_query = tasks_query.filter(
+            task.Task.status == status
+        )
+
+    if project_id is not None:
+        tasks_query = tasks_query.filter(
+            task.Task.project_id == project_id
+        )
+
+    if name is not None:
+        tasks_query = tasks_query.filter(
+            task.Task.name.contains(name)
+        )
+
+    return tasks_query.all()
 
 
 @router.put("/{task_id}", response_model=TaskResponse)
