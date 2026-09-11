@@ -1,12 +1,25 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import "./App.css"
 
 function App() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [loggedIn, setLoggedIn] = useState(false)
+  const [projects, setProjects] = useState([])
+  const [projectName, setProjectName] = useState("")
+  const [selectedProject, setSelectedProject] = useState(null)
+  const [tasks, setTasks] = useState([])
+  const [taskName, setTaskName] = useState("")
+  const [taskDueDate, setTaskDueDate] = useState("")
+  const [taskStatus, setTaskStatus] = useState("TODO")
+  const [users, setUsers] = useState([])
+  const [assignedUserId, setAssignedUserId] = useState(1)
+  const [currentUserId, setCurrentUserId] = useState(null)
+  const [editingTask, setEditingTask] = useState(null)
+
   const handleLogin = async (event) => {
-  event.preventDefault()
+  
+    event.preventDefault()
 
   const formData = new URLSearchParams()
   formData.append("username", username)
@@ -36,7 +49,7 @@ function App() {
   })
 
   const meData = await meResponse.json()
-
+  setCurrentUserId(meData.user_id)
   console.log("Current user:", meData)
 }
   } catch (error) {
@@ -44,11 +57,321 @@ function App() {
   }
 }
 
+const handleCreateProject = async () => {
+  const token = localStorage.getItem("token")
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/projects/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        project_name: projectName,
+      }),
+    })
+
+    const data = await response.json()
+
+    console.log("Create project status:", response.status)
+    console.log("Created project:", data)
+
+    setProjects((currentProjects) => [...currentProjects, data])
+setProjectName("")
+  } catch (error) {
+    console.error("Create project error:", error)
+  }
+}
+
+const handleCreateTask = async () => {
+  if (!selectedProject) {
+    return
+  }
+
+  const token = localStorage.getItem("token")
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/tasks/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        name: taskName,
+        project_id: selectedProject.id,
+        assigned_user_id: assignedUserId,
+        status: taskStatus,
+        due_date: taskDueDate,
+      }),
+    })
+
+    const data = await response.json()
+
+    console.log("Create task status:", response.status)
+    console.log("Created task:", data)
+
+    setTasks((currentTasks) => [...currentTasks, data])
+    setTaskName("")
+    setTaskDueDate("")
+    setTaskStatus("TODO")
+    setAssignedUserId(currentUserId)
+  } catch (error) {
+    console.error("Create task error:", error)
+  }
+}
+
+const handleEditTask = (task) => {
+  setEditingTask(task)
+  console.log("Editing task:", task)
+}
+
+const handleUpdateTask = async () => {
+  const token = localStorage.getItem("token")
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8000/tasks/${editingTask.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: editingTask.name,
+          status: editingTask.status,
+          due_date: editingTask.due_date,
+        }),
+      }
+    )
+
+    const data = await response.json()
+
+    console.log("Update task status:", response.status)
+    console.log("Updated task:", data)
+    
+    setTasks((currentTasks) =>
+     currentTasks.map((task) =>
+      task.id === data.id ? data : task
+  )
+)
+
+    setEditingTask(null)
+
+  } catch (error) {
+    console.error("Update task error:", error)
+  }
+}
+
+useEffect(() => {
+  if (!loggedIn) {
+    return
+  }
+
+  const token = localStorage.getItem("token")
+
+  fetch("http://127.0.0.1:8000/projects/", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+    .then((response) => response.json())
+    .then((data) => {
+  console.log("Projects:", data)
+  setProjects(data)
+})
+    .catch((error) => {
+      console.error("Projects error:", error)
+    })
+}, [loggedIn])
+
+useEffect(() => {
+  if (!loggedIn) {
+    return
+  }
+
+  const token = localStorage.getItem("token")
+
+  fetch("http://127.0.0.1:8000/users/", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      console.log("Users:", data)
+      setUsers(data)
+    })
+    .catch((error) => {
+      console.error("Users error:", error)
+    })
+}, [loggedIn])
+
+useEffect(() => {
+  if (!selectedProject) {
+    return
+  }
+
+  const token = localStorage.getItem("token")
+
+  fetch(
+    `http://127.0.0.1:8000/tasks/?project_id=${selectedProject.id}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+    .then((response) => response.json())
+    .then((data) => {
+      console.log("Tasks:", data)
+      setTasks(data)
+    })
+    .catch((error) => {
+      console.error("Tasks error:", error)
+    })
+}, [selectedProject])
   if (loggedIn) {
   return (
-    <div>
+    <div className="dashboard">
       <h1>Dashboard</h1>
       <p>Welcome to Task Management!</p>
+
+      {selectedProject && (
+        <div>
+          <h2>Selected Project: {selectedProject.project_name}</h2>
+
+          <div className="create-task">
+            <input
+              type="text"
+              placeholder="Enter task name"
+              value={taskName}
+              onChange={(event) => setTaskName(event.target.value)}
+            />
+
+            <input
+  type="date"
+  value={taskDueDate}
+  onChange={(event) => setTaskDueDate(event.target.value)}
+            />
+
+<select
+  value={taskStatus}
+  onChange={(event) => setTaskStatus(event.target.value)}
+>
+  <option value="TODO">To Do</option>
+  <option value="IN_PROGRESS">In Progress</option>
+  <option value="DONE">Done</option>
+</select>
+
+
+
+
+<select
+  value={assignedUserId}
+  onChange={(event) => setAssignedUserId(Number(event.target.value))}
+>
+  {users.map((user) => (
+    <option key={user.id} value={user.id}>
+      {user.username}
+    </option>
+  ))}
+</select>
+
+<button onClick={handleCreateTask}>Create Task</button>
+          </div>
+          <h3>Tasks</h3>
+          {editingTask && (
+  <div className="edit-task">
+    <h3>Edit Task</h3>
+
+    <input
+      type="text"
+      value={editingTask.name}
+      onChange={(event) =>
+        setEditingTask({
+          ...editingTask,
+          name: event.target.value,
+        })
+      }
+    />
+
+    <select
+     value={editingTask.status}
+     onChange={(event) =>
+      setEditingTask({
+        ...editingTask,
+        status: event.target.value,
+                    })
+              }
+    >
+  <option value="TODO">To Do</option>
+  <option value="IN_PROGRESS">In Progress</option>
+  <option value="DONE">Done</option>
+</select>
+
+<input
+  type="date"
+  value={editingTask.due_date || ""}
+  onChange={(event) =>
+    setEditingTask({
+      ...editingTask,
+      due_date: event.target.value,
+    })
+  }
+/>
+
+<button onClick={handleUpdateTask}>
+  Save Changes
+</button>
+
+  </div>
+)}
+
+           {tasks.map((task) => (
+            <div className="task-card" key={task.id}>
+              {console.log("Task user_id:", task.user_id)}
+              <h4>{task.name}</h4>
+              <p>Status: {task.status}</p>
+              <p>
+                Due Date: {task.due_date ? task.due_date : "No due date"}
+              </p>
+              <p>
+                Assigned User: {users.find((user) => user.id === task.user_id)?.username || "Unassigned"}
+              </p>
+
+              <button onClick={() => handleEditTask(task)}>
+                Edit
+              </button>
+              </div>
+))}
+        </div>
+      )}
+
+      <div className="create-project">
+        <input
+          type="text"
+          placeholder="Enter project name"
+          value={projectName}
+          onChange={(event) => setProjectName(event.target.value)}
+        />
+
+        <button onClick={handleCreateProject}>Create Project</button>
+      </div>
+
+      <h2>My Projects</h2>
+
+      {projects.map((project) => (
+        <div
+          className="project-card"
+          key={project.id}
+          onClick={() => setSelectedProject(project)}
+        >
+          <h3>{project.project_name}</h3>
+        </div>
+      ))}
     </div>
   )
 }

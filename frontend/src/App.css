@@ -96,3 +96,55 @@ body {
   font-weight: 600;
   cursor: pointer;
 }
+
+.dashboard {
+  color: #1e293b;
+}
+
+.dashboard h1 {
+  color: #172554;
+}
+
+.dashboard h2 {
+  color: #334155;
+}
+
+.dashboard h3 {
+  color: #1e293b;
+}
+
+.project-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-top: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.project-card h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 17px;
+}
+
+.task-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-top: 10px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+}
+
+.task-card h4 {
+  margin: 0 0 6px;
+  color: #1e293b;
+  font-size: 16px;
+}
+
+.task-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
