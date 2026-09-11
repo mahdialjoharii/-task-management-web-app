@@ -127,6 +127,39 @@ const handleEditTask = (task) => {
   console.log("Editing task:", task)
 }
 
+const handleDeleteTask = async (taskId) => {
+  const confirmed = window.confirm("Are you sure you want to delete this task?")
+
+  if (!confirmed) {
+    return
+  }
+  const token = localStorage.getItem("token")
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8000/tasks/${taskId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
+
+    const data = await response.json()
+
+    console.log("Delete task status:", response.status)
+    console.log("Delete task response:", data)
+
+    setTasks((currentTasks) =>
+  currentTasks.filter((task) => task.id !== taskId)
+            )
+
+  } catch (error) {
+    console.error("Delete task error:", error)
+  }
+}
+
 const handleUpdateTask = async () => {
   const token = localStorage.getItem("token")
 
@@ -151,7 +184,7 @@ const handleUpdateTask = async () => {
 
     console.log("Update task status:", response.status)
     console.log("Updated task:", data)
-    
+
     setTasks((currentTasks) =>
      currentTasks.map((task) =>
       task.id === data.id ? data : task
@@ -345,6 +378,11 @@ useEffect(() => {
               <button onClick={() => handleEditTask(task)}>
                 Edit
               </button>
+
+              <button onClick={() => handleDeleteTask(task.id)}>
+                Delete
+              </button>
+
               </div>
 ))}
         </div>
