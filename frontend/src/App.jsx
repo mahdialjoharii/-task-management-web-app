@@ -400,22 +400,34 @@ useEffect(() => {
 
     <div className="stats-grid">
      <div className="stat-card">
-      <span>Total Tasks</span>
+      <div className="stat-card-top">
+       <span>Total Tasks</span>
+       <span className="stat-icon">📋</span>
+      </div>
       <strong>{totalTasks}</strong>
      </div>
 
      <div className="stat-card">
-      <span>To Do</span>
+      <div className="stat-card-top">
+       <span>To Do</span>
+       <span className="stat-icon">📝</span>
+      </div>
       <strong>{todoTasks}</strong>
      </div>
 
      <div className="stat-card">
-      <span>In Progress</span>
+      <div className="stat-card-top">
+       <span>In Progress</span>
+       <span className="stat-icon">🔄</span>
+      </div>
       <strong>{inProgressTasks}</strong>
      </div>
 
      <div className="stat-card">
-      <span>Completed</span>
+      <div className="stat-card-top">
+       <span>Completed</span>
+       <span className="stat-icon">✅</span>
+      </div>
       <strong>{completedTasks}</strong>
      </div>
     </div>
