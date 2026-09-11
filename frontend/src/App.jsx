@@ -17,6 +17,14 @@ function App() {
   const [currentUserId, setCurrentUserId] = useState(null)
   const [editingTask, setEditingTask] = useState(null)
 
+  const handleLogout = () => {
+  localStorage.removeItem("token")
+  setLoggedIn(false)
+  setCurrentUserId(null)
+  setSelectedProject(null)
+  setTasks([])
+  }
+
   const handleLogin = async (event) => {
   
     event.preventDefault()
@@ -58,6 +66,11 @@ function App() {
 }
 
 const handleCreateProject = async () => {
+  if (!projectName.trim()) {
+    alert("Please enter a project name")
+    return
+  }
+
   const token = localStorage.getItem("token")
 
   try {
@@ -67,9 +80,7 @@ const handleCreateProject = async () => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        project_name: projectName,
-      }),
+      body: JSON.stringify({ project_name: projectName }),
     })
 
     const data = await response.json()
@@ -78,13 +89,18 @@ const handleCreateProject = async () => {
     console.log("Created project:", data)
 
     setProjects((currentProjects) => [...currentProjects, data])
-setProjectName("")
+    setProjectName("")
   } catch (error) {
     console.error("Create project error:", error)
   }
 }
 
 const handleCreateTask = async () => {
+  if (!taskName.trim()) {
+   alert("Please enter a task name")
+   return
+  }
+
   if (!selectedProject) {
     return
   }
@@ -269,110 +285,147 @@ useEffect(() => {
   if (loggedIn) {
   return (
     <div className="dashboard">
-      <h1>Dashboard</h1>
-      <p>Welcome to Task Management!</p>
 
-      {selectedProject && (
-        <div>
-          <h2>Selected Project: {selectedProject.project_name}</h2>
+  <header className="dashboard-header">
+   <div>
+    <h1>Dashboard</h1>
+    <p>Welcome to Task Management!</p>
+   </div>
 
-          <div className="create-task">
-            <input
-              type="text"
-              placeholder="Enter task name"
-              value={taskName}
-              onChange={(event) => setTaskName(event.target.value)}
-            />
+   <button className="logout-button" onClick={handleLogout}>
+     Logout
+   </button>
+ </header>
 
-            <input
-  type="date"
-  value={taskDueDate}
-  onChange={(event) => setTaskDueDate(event.target.value)}
-            />
+  <main className="dashboard-content">
 
-<select
-  value={taskStatus}
-  onChange={(event) => setTaskStatus(event.target.value)}
->
-  <option value="TODO">To Do</option>
-  <option value="IN_PROGRESS">In Progress</option>
-  <option value="DONE">Done</option>
-</select>
+    {selectedProject && (
+      <section className="selected-project-section">
 
-
-
-
-<select
-  value={assignedUserId}
-  onChange={(event) => setAssignedUserId(Number(event.target.value))}
->
-  {users.map((user) => (
-    <option key={user.id} value={user.id}>
-      {user.username}
-    </option>
-  ))}
-</select>
-
-<button onClick={handleCreateTask}>Create Task</button>
+        <div className="section-header">
+          <div>
+            <span className="section-label">CURRENT PROJECT</span>
+            <h2>{selectedProject.project_name}</h2>
           </div>
+        </div>
+
+        <div className="create-task">
+          <input
+            type="text"
+            placeholder="Enter task name"
+            value={taskName}
+            onChange={(event) => setTaskName(event.target.value)}
+          />
+
+          <input
+            type="date"
+            value={taskDueDate}
+            onChange={(event) => setTaskDueDate(event.target.value)}
+          />
+
+          <select
+            value={taskStatus}
+            onChange={(event) => setTaskStatus(event.target.value)}
+          >
+            <option value="TODO">To Do</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="DONE">Done</option>
+          </select>
+
+          <select
+            value={assignedUserId}
+            onChange={(event) => setAssignedUserId(Number(event.target.value))}
+          >
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.username}
+              </option>
+            ))}
+          </select>
+
+          <button onClick={handleCreateTask}>
+            Create Task
+          </button>
+        </div>
+
+        <div className="tasks-section">
           <h3>Tasks</h3>
+
           {editingTask && (
-  <div className="edit-task">
-    <h3>Edit Task</h3>
+            <div className="edit-task">
+              <h3>Edit Task</h3>
 
-    <input
-      type="text"
-      value={editingTask.name}
-      onChange={(event) =>
-        setEditingTask({
-          ...editingTask,
-          name: event.target.value,
-        })
-      }
-    />
+              <input
+                type="text"
+                value={editingTask.name}
+                onChange={(event) =>
+                  setEditingTask({
+                    ...editingTask,
+                    name: event.target.value,
+                  })
+                }
+              />
 
-    <select
-     value={editingTask.status}
-     onChange={(event) =>
-      setEditingTask({
-        ...editingTask,
-        status: event.target.value,
-                    })
-              }
-    >
-  <option value="TODO">To Do</option>
-  <option value="IN_PROGRESS">In Progress</option>
-  <option value="DONE">Done</option>
-</select>
+              <select
+                value={editingTask.status}
+                onChange={(event) =>
+                  setEditingTask({
+                    ...editingTask,
+                    status: event.target.value,
+                  })
+                }
+              >
+                <option value="TODO">To Do</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="DONE">Done</option>
+              </select>
 
-<input
-  type="date"
-  value={editingTask.due_date || ""}
-  onChange={(event) =>
-    setEditingTask({
-      ...editingTask,
-      due_date: event.target.value,
-    })
-  }
-/>
+              <input
+                type="date"
+                value={editingTask.due_date || ""}
+                onChange={(event) =>
+                  setEditingTask({
+                    ...editingTask,
+                    due_date: event.target.value,
+                  })
+                }
+              />
 
-<button onClick={handleUpdateTask}>
-  Save Changes
-</button>
+              <button onClick={handleUpdateTask}>
+                Save Changes
+              </button>
 
-  </div>
-)}
+              <button onClick={() => setEditingTask(null)}>
+                Cancel
+              </button>
 
-           {tasks.map((task) => (
+            </div>
+          )}
+
+          {tasks.map((task) => (
             <div className="task-card" key={task.id}>
-              {console.log("Task user_id:", task.user_id)}
+
               <h4>{task.name}</h4>
-              <p>Status: {task.status}</p>
+
+              <p>
+                Status:{" "}
+               <span className={`status-badge ${task.status.toLowerCase()}`}>
+                 {task.status === "TODO"
+                    ? "To Do"
+                    : task.status === "IN_PROGRESS"
+                    ? "In Progress"
+                    : "Done"}
+                </span>
+              </p>
+
               <p>
                 Due Date: {task.due_date ? task.due_date : "No due date"}
               </p>
+
               <p>
-                Assigned User: {users.find((user) => user.id === task.user_id)?.username || "Unassigned"}
+                Assigned User:{" "}
+                {users.find((user) => user.id === task.user_id)?.username ||
+                  "Unassigned"}
               </p>
 
               <button onClick={() => handleEditTask(task)}>
@@ -383,10 +436,14 @@ useEffect(() => {
                 Delete
               </button>
 
-              </div>
-))}
+            </div>
+          ))}
         </div>
-      )}
+
+      </section>
+    )}
+
+    <section className="projects-section">
 
       <div className="create-project">
         <input
@@ -396,21 +453,32 @@ useEffect(() => {
           onChange={(event) => setProjectName(event.target.value)}
         />
 
-        <button onClick={handleCreateProject}>Create Project</button>
+        <button onClick={handleCreateProject}>
+          Create Project
+        </button>
       </div>
 
       <h2>My Projects</h2>
 
-      {projects.map((project) => (
-        <div
-          className="project-card"
-          key={project.id}
-          onClick={() => setSelectedProject(project)}
-        >
-          <h3>{project.project_name}</h3>
-        </div>
-      ))}
-    </div>
+      <div className="projects-grid">
+        {projects.map((project) => (
+          <div
+            className="project-card"
+            key={project.id}
+            onClick={() => {
+             setSelectedProject(project)
+             setEditingTask(null)
+            }}
+          >
+            <h3>{project.project_name}</h3>
+          </div>
+        ))}
+      </div>
+
+    </section>
+
+  </main>
+</div>
   )
 }
 
