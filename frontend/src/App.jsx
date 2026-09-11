@@ -136,6 +136,24 @@ const handleDeleteProject = async (projectId) => {
   }
 }
 
+const getDueDateStatus = (dueDate) => {
+  if (!dueDate) return "none"
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const due = new Date(dueDate)
+  due.setHours(0, 0, 0, 0)
+
+  const difference = due - today
+  const days = difference / (1000 * 60 * 60 * 24)
+
+  if (days < 0) return "overdue"
+  if (days <= 2) return "soon"
+
+  return "normal"
+}
+
 const handleCreateTask = async () => {
   if (!taskName.trim()) {
    alert("Please enter a task name")
@@ -336,6 +354,21 @@ useEffect(() => {
     })
 }, [selectedProject])
   if (loggedIn) {
+
+    const totalTasks = tasks.length
+
+    const completedTasks = tasks.filter(
+     (task) => task.status === "DONE"
+    ).length
+
+    const inProgressTasks = tasks.filter(
+     (task) => task.status === "IN_PROGRESS"
+    ).length
+
+    const todoTasks = tasks.filter(
+     (task) => task.status === "TODO"
+    ).length
+
   return (
     <div className="dashboard">
 
@@ -364,6 +397,28 @@ useEffect(() => {
   </header>
 
   <main className="dashboard-content">
+
+    <div className="stats-grid">
+     <div className="stat-card">
+      <span>Total Tasks</span>
+      <strong>{totalTasks}</strong>
+     </div>
+
+     <div className="stat-card">
+      <span>To Do</span>
+      <strong>{todoTasks}</strong>
+     </div>
+
+     <div className="stat-card">
+      <span>In Progress</span>
+      <strong>{inProgressTasks}</strong>
+     </div>
+
+     <div className="stat-card">
+      <span>Completed</span>
+      <strong>{completedTasks}</strong>
+     </div>
+    </div>
 
     {selectedProject && (
       <section className="selected-project-section">
@@ -470,38 +525,39 @@ useEffect(() => {
 
           {tasks.map((task) => (
             <div className="task-card" key={task.id}>
+              <div className="task-card-header">
+                <h4>{task.name}</h4>
 
-              <h4>{task.name}</h4>
-
-              <p>
-                Status:{" "}
-               <span className={`status-badge ${task.status.toLowerCase()}`}>
-                 {task.status === "TODO"
-                    ? "To Do"
-                    : task.status === "IN_PROGRESS"
-                    ? "In Progress"
-                    : "Done"}
+                <span className={`status-badge ${task.status.toLowerCase()}`}>
+                  {task.status === "TODO"
+                     ? "To Do"
+                     : task.status === "IN_PROGRESS"
+                     ? "In Progress"
+                     : "Done"}
                 </span>
-              </p>
+              </div>
 
-              <p>
-                Due Date: {task.due_date ? task.due_date : "No due date"}
-              </p>
+              <div className="task-details">
+               <p className={`task-due-date ${getDueDateStatus(task.due_date)}`}>
+                <strong>Due Date:</strong>{" "}
+                {task.due_date ? task.due_date : "No due date"}
+               </p>
 
-              <p>
-                Assigned User:{" "}
-                {users.find((user) => user.id === task.user_id)?.username ||
-                  "Unassigned"}
-              </p>
+               <p>
+                <strong>Assigned to:</strong>{" "}
+                {users.find((user) => user.id === task.user_id)?.username ||"Unassigned"}
+               </p>
+              </div>
 
-              <button onClick={() => handleEditTask(task)}>
+              <div className="task-actions">
+               <button onClick={() => handleEditTask(task)}>
                 Edit
-              </button>
+               </button>
 
-              <button onClick={() => handleDeleteTask(task.id)}>
+               <button onClick={() => handleDeleteTask(task.id)}>
                 Delete
-              </button>
-
+               </button>
+              </div>
             </div>
           ))}
         </div>
