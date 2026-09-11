@@ -4,6 +4,7 @@ import "./App.css"
 function App() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [currentUsername, setCurrentUsername] = useState("")
   const [loggedIn, setLoggedIn] = useState(false)
   const [projects, setProjects] = useState([])
   const [projectName, setProjectName] = useState("")
@@ -21,6 +22,7 @@ function App() {
   localStorage.removeItem("token")
   setLoggedIn(false)
   setCurrentUserId(null)
+  setCurrentUsername("")
   setSelectedProject(null)
   setTasks([])
   }
@@ -92,6 +94,45 @@ const handleCreateProject = async () => {
     setProjectName("")
   } catch (error) {
     console.error("Create project error:", error)
+  }
+}
+
+const handleDeleteProject = async (projectId) => {
+  const confirmed = window.confirm(
+    "Are you sure you want to delete this project and all its tasks?"
+  )
+
+  if (!confirmed) return
+
+  const token = localStorage.getItem("token")
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8000/projects/${projectId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
+
+    const data = await response.json()
+
+    console.log("Delete project status:", response.status)
+    console.log("Delete project response:", data)
+
+    setProjects((currentProjects) =>
+      currentProjects.filter((project) => project.id !== projectId)
+    )
+
+    if (selectedProject?.id === projectId) {
+      setSelectedProject(null)
+      setTasks([])
+      setEditingTask(null)
+    }
+  } catch (error) {
+    console.error("Delete project error:", error)
   }
 }
 
@@ -259,6 +300,18 @@ useEffect(() => {
 }, [loggedIn])
 
 useEffect(() => {
+  if (!currentUserId || users.length === 0) return
+
+  const currentUser = users.find(
+    (user) => user.id === currentUserId
+  )
+
+  if (currentUser) {
+    setCurrentUsername(currentUser.username)
+  }
+}, [currentUserId, users])
+
+useEffect(() => {
   if (!selectedProject) {
     return
   }
@@ -288,14 +341,27 @@ useEffect(() => {
 
   <header className="dashboard-header">
    <div>
-    <h1>Dashboard</h1>
-    <p>Welcome to Task Management!</p>
+     <h1>Dashboard</h1>
+     <p>Welcome back, {currentUsername} !</p>
    </div>
 
-   <button className="logout-button" onClick={handleLogout}>
-     Logout
-   </button>
- </header>
+   <div className="profile-section">
+     <div className="profile-info">
+       <div className="profile-avatar">
+         {currentUsername.charAt(0).toUpperCase()}
+       </div>
+
+       <div>
+         <strong>{currentUsername} </strong>
+         <span>Account</span>
+       </div>
+     </div>
+
+     <button className="logout-button" onClick={handleLogout}>
+       Logout
+     </button>
+    </div>
+  </header>
 
   <main className="dashboard-content">
 
@@ -470,8 +536,20 @@ useEffect(() => {
              setEditingTask(null)
             }}
           >
-            <h3>{project.project_name}</h3>
-          </div>
+           <div className="project-card-content">
+           <h3>{project.project_name}</h3>
+
+           <button
+            className="delete-project-button"
+            onClick={(event) => {
+             event.stopPropagation()
+             handleDeleteProject(project.id)
+           }}
+          >
+           Delete
+          </button>
+        </div>
+      </div>
         ))}
       </div>
 
