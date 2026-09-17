@@ -20,6 +20,7 @@ function App() {
   const [currentUserId, setCurrentUserId] = useState(null)
   const [editingTask, setEditingTask] = useState(null)
   const [editingProject, setEditingProject] = useState(null)
+  const [draggedTask, setDraggedTask] = useState(null)
   const [profileOpen, setProfileOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -351,6 +352,11 @@ const handleCreateTask = async () => {
 
   const token = localStorage.getItem("token")
 
+  if (!assignedUserId) {
+   alert("Please select an assigned user")
+   return
+  }
+
   try {
     const response = await fetch("http://127.0.0.1:8000/tasks/", {
       method: "POST",
@@ -361,7 +367,7 @@ const handleCreateTask = async () => {
       body: JSON.stringify({
         name: taskName,
         project_id: selectedProject.id,
-        assigned_user_id: assignedUserId,
+        assigned_user_id: Number(assignedUserId),
         status: taskStatus,
         due_date: taskDueDate,
       }),
@@ -371,7 +377,10 @@ const handleCreateTask = async () => {
 
     console.log("Create task status:", response.status)
     console.log("Created task:", data)
-
+    console.log(
+     "Create task error details:",
+     JSON.stringify(data.detail, null, 2)
+    )
    if (!response.ok) {
     const errorMessage = Array.isArray(data.detail)
      ? data.detail
@@ -391,6 +400,59 @@ const handleCreateTask = async () => {
   } catch (error) {
     console.error("Create task error:", error)
   }
+}
+
+const handleDragStart = (task) => {
+  setDraggedTask(task)
+}
+
+const handleDragOver = (event) => {
+  event.preventDefault()
+}
+
+const handleDrop = async (newStatus) => {
+  if (!draggedTask) return
+
+  if (draggedTask.status === newStatus) {
+    setDraggedTask(null)
+    return
+  }
+
+  const token = localStorage.getItem("token")
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8000/tasks/${draggedTask.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          status: newStatus,
+        }),
+      }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      alert(data.detail || "Failed to update task status")
+      return
+    }
+
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === data.id ? data : task
+      )
+    )
+
+  } catch (error) {
+    console.error("Drag and drop error:", error)
+  }
+
+  setDraggedTask(null)
 }
 
 const handleEditTask = (task) => {
@@ -782,8 +844,8 @@ useEffect(() => {
           </select>
 
           <select
-            value={assignedUserId}
-            onChange={(event) => setAssignedUserId(Number(event.target.value))}
+           value={assignedUserId}
+           onChange={(e) => setAssignedUserId(Number(e.target.value))}
           >
             {users.map((user) => (
               <option key={user.id} value={user.id}>
@@ -798,6 +860,213 @@ useEffect(() => {
         </div>)}
 
         <div className="tasks-section">
+          
+          <div className="kanban-board">
+            <div
+             className="kanban-column"
+             onDragOver={handleDragOver}
+             onDrop={() => handleDrop("TODO")}
+            >
+             <h3>To Do</h3>
+
+             {tasks
+                .filter((task) => task.status === "TODO")
+                .map((task) => (
+                  <div
+                   className="kanban-task"
+                   key={task.id}
+                   draggable={true}
+                   onDragStart={() => handleDragStart(task)}
+                  >
+                   <div className="kanban-task-name">
+                   {task.name}
+                   </div>
+
+                   <span className={`status-badge ${task.status.toLowerCase()}`}>
+                   {task.status === "TODO"
+                    ? "To Do"
+                    : task.status === "IN_PROGRESS"
+                    ? "In Progress"
+                    : "Done"}
+                   </span>
+
+                    {task.due_date && (
+                     <div className="kanban-task-date">
+                       Due: {task.due_date}
+                     </div>
+                    )}
+
+                    {task.user_id === currentUserId && (
+                     <span className="assigned-to-you">
+                      ⭐ Assigned to you
+                     </span>
+                    )}
+
+                    <div className="kanban-task-actions">
+                      <button
+                         className="edit-task-button"
+                         onClick={(event) => {
+                          event.stopPropagation()
+                          handleEditTask(task)
+                         }}
+                      >
+                         Edit
+                      </button>
+
+                      {selectedProject?.user_id === currentUserId && (
+                        <button
+                         className="delete-task-button"
+                         onClick={(event) => {
+                           event.stopPropagation()
+                           handleDeleteTask(task.id)
+                         }}
+                        >
+                         Delete
+                        </button>
+                     )}
+                   </div>
+
+                  </div>
+               ))}
+            </div>
+
+            <div
+             className="kanban-column"
+             onDragOver={handleDragOver}
+             onDrop={() => handleDrop("IN_PROGRESS")}
+            >
+             <h3>In Progress</h3>
+
+             {tasks
+              .filter((task) => task.status === "IN_PROGRESS")
+              .map((task) => (
+               <div
+                   className="kanban-task"
+                   key={task.id}
+                   draggable={true}
+                   onDragStart={() => handleDragStart(task)}
+                  >
+                   <div className="kanban-task-name">
+                   {task.name}
+                   </div>
+
+                   <span className={`status-badge ${task.status.toLowerCase()}`}>
+                   {task.status === "TODO"
+                    ? "To Do"
+                    : task.status === "IN_PROGRESS"
+                    ? "In Progress"
+                    : "Done"}
+                   </span>
+
+                    {task.due_date && (
+                     <div className="kanban-task-date">
+                       Due: {task.due_date}
+                     </div>
+                    )}
+
+                    {task.user_id === currentUserId && (
+                     <span className="assigned-to-you">
+                      ⭐ Assigned to you
+                     </span>
+                    )}
+
+                    <div className="kanban-task-actions">
+                      <button
+                         className="edit-task-button"
+                         onClick={(event) => {
+                          event.stopPropagation()
+                          handleEditTask(task)
+                         }}
+                      >
+                         Edit
+                      </button>
+
+                      {selectedProject?.user_id === currentUserId && (
+                        <button
+                         className="delete-task-button"
+                         onClick={(event) => {
+                           event.stopPropagation()
+                           handleDeleteTask(task.id)
+                         }}
+                        >
+                         Delete
+                        </button>
+                     )}
+                   </div>
+
+                  </div>
+              ))}
+            </div>
+
+            <div
+             className="kanban-column"
+             onDragOver={handleDragOver}
+             onDrop={() => handleDrop("DONE")}
+            >
+             <h3>Done</h3>
+
+            {tasks
+             .filter((task) => task.status === "DONE")
+             .map((task) => (
+              <div
+                   className="kanban-task"
+                   key={task.id}
+                   draggable={true}
+                   onDragStart={() => handleDragStart(task)}
+                  >
+                   <div className="kanban-task-name">
+                   {task.name}
+                   </div>
+
+                   <span className={`status-badge ${task.status.toLowerCase()}`}>
+                   {task.status === "TODO"
+                    ? "To Do"
+                    : task.status === "IN_PROGRESS"
+                    ? "In Progress"
+                    : "Done"}
+                   </span>
+
+                    {task.due_date && (
+                     <div className="kanban-task-date">
+                       Due: {task.due_date}
+                     </div>
+                    )}
+
+                    {task.user_id === currentUserId && (
+                     <span className="assigned-to-you">
+                      ⭐ Assigned to you
+                     </span>
+                    )}
+
+                    <div className="kanban-task-actions">
+                      <button
+                         className="edit-task-button"
+                         onClick={(event) => {
+                          event.stopPropagation()
+                          handleEditTask(task)
+                         }}
+                      >
+                         Edit
+                      </button>
+
+                      {selectedProject?.user_id === currentUserId && (
+                        <button
+                         className="delete-task-button"
+                         onClick={(event) => {
+                           event.stopPropagation()
+                           handleDeleteTask(task.id)
+                         }}
+                        >
+                         Delete
+                        </button>
+                     )}
+                   </div>
+
+                  </div>
+             ))}
+            </div>
+          </div>
+
           <h3>Tasks</h3>
 
           {editingTask && (
@@ -851,57 +1120,7 @@ useEffect(() => {
             </div>
           )}
 
-          {tasks.map((task) => (
-            <div className="task-card" key={task.id}>
-              <div className="task-card-header">
-                <h4>{task.name}</h4>
-
-                {task.user_id === currentUserId && (
-                 <span className="assigned-to-you">
-                  ⭐ Assigned to you
-                 </span>
-                )}
-
-                <span className={`status-badge ${task.status.toLowerCase()}`}>
-                  {task.status === "TODO"
-                     ? "To Do"
-                     : task.status === "IN_PROGRESS"
-                     ? "In Progress"
-                     : "Done"}
-                </span>
-              </div>
-
-              <div className="task-details">
-               <p className={`task-due-date ${getDueDateStatus(task.due_date)}`}>
-                <strong>Due Date:</strong>{" "}
-                {task.due_date ? task.due_date : "No due date"}
-               </p>
-
-               <p>
-                <strong>Assigned to:</strong>{" "}
-                {users.find((user) => user.id === task.user_id)?.username ||"Unassigned"}
-               </p>
-              </div>
-
-              <div className="task-actions">
-               <button
-                className="edit-task-button"
-                onClick={() => handleEditTask(task)}
-               >
-                Edit
-               </button>
-
-               {selectedProject?.user_id === currentUserId && (
-                <button
-                 className="delete-task-button"
-                 onClick={() => handleDeleteTask(task.id)}
-                >
-                  Delete
-                </button>
-              )}
-              </div>
-            </div>
-          ))}
+          
         </div>
 
       </section>
