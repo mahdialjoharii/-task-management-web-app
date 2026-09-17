@@ -145,12 +145,11 @@ def delete_task(
     user_id: int = Depends(get_current_user)
 ):
     existing_task = db.query(task.Task).join(
-     project.Project,
-     task.Task.project_id == project.Project.id
+    project.Project,
+    task.Task.project_id == project.Project.id
 ).filter(
-     task.Task.id == task_id,
-     (task.Task.user_id == user_id) |
-     (project.Project.user_id == user_id)
+    task.Task.id == task_id,
+    project.Project.user_id == user_id
 ).first()
     
     if existing_task is None:

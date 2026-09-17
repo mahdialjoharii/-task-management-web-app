@@ -1,5 +1,5 @@
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from enum import Enum
 
 
@@ -15,11 +15,25 @@ class TaskCreate(BaseModel):
     status: TaskStatus = TaskStatus.TODO
     due_date: date | None = None
 
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value):
+        if not value.strip():
+            raise ValueError("Task name cannot be empty")
+        return value
+
 
 class TaskUpdate(BaseModel):
     name: str | None = None
     status: TaskStatus | None = None
     due_date: date | None = None 
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value):
+        if value is not None and not value.strip():
+            raise ValueError("Task name cannot be empty")
+        return value
 
 class TaskResponse(BaseModel):
     id: int

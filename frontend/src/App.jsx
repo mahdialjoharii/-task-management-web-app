@@ -4,6 +4,8 @@ import "./App.css"
 function App() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [email, setEmail] = useState("")
+  const [registerMode, setRegisterMode] = useState(false)
   const [currentUsername, setCurrentUsername] = useState("")
   const [loggedIn, setLoggedIn] = useState(false)
   const [projects, setProjects] = useState([])
@@ -14,9 +16,76 @@ function App() {
   const [taskDueDate, setTaskDueDate] = useState("")
   const [taskStatus, setTaskStatus] = useState("TODO")
   const [users, setUsers] = useState([])
-  const [assignedUserId, setAssignedUserId] = useState(1)
+  const [assignedUserId, setAssignedUserId] = useState("")
   const [currentUserId, setCurrentUserId] = useState(null)
   const [editingTask, setEditingTask] = useState(null)
+  const [editingProject, setEditingProject] = useState(null)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+
+  useEffect(() => {
+  const handleClickOutside = () => {
+    if (editingProject) {
+      setEditingProject(null)
+    }
+  }
+
+  document.addEventListener("click", handleClickOutside)
+
+  return () => {
+    document.removeEventListener("click", handleClickOutside)
+  }
+}, [editingProject])
+
+  useEffect(() => {
+   const token = localStorage.getItem("token")
+
+   if (!token) return
+
+   const restoreSession = async () => {
+     try {
+       const response = await fetch("http://127.0.0.1:8000/users/me", {
+         headers: {
+           Authorization: `Bearer ${token}`,
+         },
+        })
+
+        if (!response.ok) {
+         localStorage.removeItem("token")
+         return
+        }
+
+        const data = await response.json()
+
+        setCurrentUserId(data.user_id)
+        setLoggedIn(true)
+
+        console.log("Session restored:", data)
+      } catch (error) {
+        console.error("Restore session error:", error)
+      }
+    }
+
+    restoreSession()
+  }, [])
+
+  useEffect(() => {
+   const handleClickOutside = (event) => {
+     if (
+       profileOpen &&
+       !event.target.closest(".profile-section")
+      ) {
+       setProfileOpen(false)
+        }
+    }
+
+   document.addEventListener("click", handleClickOutside)
+
+   return () => {
+     document.removeEventListener("click", handleClickOutside)
+    }
+  }, [profileOpen])
 
   const handleLogout = () => {
   localStorage.removeItem("token")
@@ -60,10 +129,57 @@ function App() {
 
   const meData = await meResponse.json()
   setCurrentUserId(meData.user_id)
+  setAssignedUserId(meData.user_id)
+
   console.log("Current user:", meData)
 }
+ else {
+  alert(data.detail || "Invalid username or password")
+ }
   } catch (error) {
     console.error("Login error:", error)
+  }
+}
+
+const handleRegister = async (event) => {
+  event.preventDefault()
+
+  if (!username.trim() || !email.trim() || !password.trim()) {
+    alert("Please fill in all fields")
+    return
+  }
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/users/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: username,
+        email: email,
+        password: password,
+      }),
+    })
+
+    const data = await response.json()
+
+    console.log("Register status:", response.status)
+    console.log("Register response:", data)
+
+    if (response.ok) {
+      alert("Account created successfully!")
+
+      setUsername("")
+      setEmail("")
+      setPassword("")
+      setRegisterMode(false)
+    } else {
+      alert(data.detail || "Registration failed")
+    }
+  } catch (error) {
+    console.error("Register error:", error)
+    alert("Something went wrong. Please try again.")
   }
 }
 
@@ -89,11 +205,75 @@ const handleCreateProject = async () => {
 
     console.log("Create project status:", response.status)
     console.log("Created project:", data)
+    if (!response.ok) {
+     alert(data.detail || "Failed to create project")
+     return
+    }
 
     setProjects((currentProjects) => [...currentProjects, data])
     setProjectName("")
   } catch (error) {
     console.error("Create project error:", error)
+  }
+}
+
+const handleEditProject = (project) => {
+  setEditingProject({
+    id: project.id,
+    project_name: project.project_name,
+  })
+}
+
+const handleUpdateProject = async () => {
+  if (!editingProject.project_name.trim()) {
+    alert("Please enter a project name")
+    return
+  }
+
+  const token = localStorage.getItem("token")
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8000/projects/${editingProject.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          project_name: editingProject.project_name,
+        }),
+      }
+    )
+
+    const data = await response.json()
+
+    console.log("Update project status:", response.status)
+    console.log("Updated project:", data)
+
+    if (!response.ok) {
+      const errorMessage = Array.isArray(data.detail)
+        ? data.detail.map((error) => error.msg).join(", ")
+        : data.detail || "Failed to update project"
+
+      alert(errorMessage)
+      return
+    }
+
+    setProjects((currentProjects) =>
+      currentProjects.map((project) =>
+        project.id === data.id ? data : project
+      )
+    )
+
+    if (selectedProject?.id === data.id) {
+      setSelectedProject(data)
+    }
+
+    setEditingProject(null)
+  } catch (error) {
+    console.error("Update project error:", error)
   }
 }
 
@@ -121,6 +301,11 @@ const handleDeleteProject = async (projectId) => {
 
     console.log("Delete project status:", response.status)
     console.log("Delete project response:", data)
+
+    if (!response.ok) {
+     alert(data.detail || "Failed to delete project")
+     return
+    }
 
     setProjects((currentProjects) =>
       currentProjects.filter((project) => project.id !== projectId)
@@ -187,6 +372,17 @@ const handleCreateTask = async () => {
     console.log("Create task status:", response.status)
     console.log("Created task:", data)
 
+   if (!response.ok) {
+    const errorMessage = Array.isArray(data.detail)
+     ? data.detail
+        .map((error) => error.msg)
+        .join(", ")
+     : data.detail || "Failed to create task"
+
+    alert(errorMessage)
+    return
+   }
+
     setTasks((currentTasks) => [...currentTasks, data])
     setTaskName("")
     setTaskDueDate("")
@@ -223,6 +419,11 @@ const handleDeleteTask = async (taskId) => {
 
     const data = await response.json()
 
+    if (!response.ok) {
+     alert(data.detail || "Failed to delete task")
+     return
+    }
+
     console.log("Delete task status:", response.status)
     console.log("Delete task response:", data)
 
@@ -237,6 +438,11 @@ const handleDeleteTask = async (taskId) => {
 
 const handleUpdateTask = async () => {
   const token = localStorage.getItem("token")
+
+  if (!editingTask.name.trim()) {
+   alert("Please enter a task name")
+   return
+  }
 
   try {
     const response = await fetch(
@@ -259,6 +465,11 @@ const handleUpdateTask = async () => {
 
     console.log("Update task status:", response.status)
     console.log("Updated task:", data)
+
+    if (!response.ok) {
+     alert(data.detail || "Failed to update task")
+     return
+    }
 
     setTasks((currentTasks) =>
      currentTasks.map((task) =>
@@ -287,9 +498,14 @@ useEffect(() => {
   })
     .then((response) => response.json())
     .then((data) => {
-  console.log("Projects:", data)
-  setProjects(data)
-})
+      if (!Array.isArray(data)) {
+        console.error("Failed to fetch projects:", data)
+        return
+      }
+
+      console.log("Projects:", data)
+      setProjects(data)
+    })
     .catch((error) => {
       console.error("Projects error:", error)
     })
@@ -309,6 +525,11 @@ useEffect(() => {
   })
     .then((response) => response.json())
     .then((data) => {
+      if (!Array.isArray(data)) {
+        console.error("Failed to fetch users:", data)
+        return
+      }
+
       console.log("Users:", data)
       setUsers(data)
     })
@@ -346,6 +567,11 @@ useEffect(() => {
   )
     .then((response) => response.json())
     .then((data) => {
+      if (!Array.isArray(data)) {
+        console.error("Failed to fetch tasks:", data)
+        return
+      }
+
       console.log("Tasks:", data)
       setTasks(data)
     })
@@ -369,30 +595,119 @@ useEffect(() => {
      (task) => task.status === "TODO"
     ).length
 
-  return (
-    <div className="dashboard">
+  return ( 
+    <>
+   {accountOpen && (
+    <div className="account-overlay">
+     <div className="account-card">
+
+       <button
+         className="account-close"
+         onClick={() => setAccountOpen(false)}
+       >
+         ×
+       </button>
+
+       <div className="account-avatar">
+         {currentUsername.charAt(0).toUpperCase()}
+       </div>
+
+       <h2>{currentUsername}</h2>
+
+       <p>Account ID: {currentUserId}</p>
+
+       <button
+         className="account-logout"
+         onClick={handleLogout}
+       >
+         🚪 Logout
+       </button>
+
+      </div>
+    </div>
+    
+ )}
+
+  
+    < div className={`dashboard ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
+
+      <aside className={`sidebar ${sidebarOpen ? "open" : "closed"}`}>
+       <div className="sidebar-logo">
+        <h2>Task Manager</h2>
+       </div>
+
+       <nav className="sidebar-nav">
+        <button className="active">🏠 Dashboard</button>
+
+        <button
+         onClick={() => {
+          document
+          .querySelector(".projects-section")
+          ?.scrollIntoView({ behavior: "smooth" })
+         }}
+       >
+         📁 Projects
+        </button>
+       </nav>
+
+       <div className="sidebar-bottom">
+        <button className="sidebar-logout" onClick={handleLogout}>
+         🚪 Logout
+        </button>
+       </div>
+      </aside>
 
   <header className="dashboard-header">
+    <button
+     className="sidebar-toggle"
+     onClick={() => setSidebarOpen(!sidebarOpen)} 
+    >
+     ☰
+    </button>
+
    <div>
      <h1>Dashboard</h1>
      <p>Welcome back, {currentUsername} !</p>
    </div>
 
    <div className="profile-section">
-     <div className="profile-info">
-       <div className="profile-avatar">
-         {currentUsername.charAt(0).toUpperCase()}
-       </div>
 
-       <div>
-         <strong>{currentUsername} </strong>
-         <span>Account</span>
-       </div>
+     <div
+      className="profile-info"
+      onClick={() => setProfileOpen(!profileOpen)}
+     >
+      <div className="profile-avatar">
+       {currentUsername.charAt(0).toUpperCase()}
+      </div>
+
+      <div>
+       <strong>{currentUsername} </strong>
+       <span>Account</span>
+      </div>
+
+      <span className="profile-arrow">
+       {profileOpen ? "▲" : "▼"}
+      </span>
      </div>
 
-     <button className="logout-button" onClick={handleLogout}>
-       Logout
-     </button>
+      {profileOpen && (
+       <div className="profile-dropdown">
+        <button
+         onClick={() => {
+         setAccountOpen(true)
+         setProfileOpen(false)
+         }}
+        >
+         👤 My Account
+        </button>
+
+        <button onClick={handleLogout}>
+         🚪 Logout
+        </button>
+       </div>
+       
+      )}
+
     </div>
   </header>
 
@@ -441,7 +756,8 @@ useEffect(() => {
             <h2>{selectedProject.project_name}</h2>
           </div>
         </div>
-
+        
+        {selectedProject?.user_id === currentUserId && (
         <div className="create-task">
           <input
             type="text"
@@ -479,7 +795,7 @@ useEffect(() => {
           <button onClick={handleCreateTask}>
             Create Task
           </button>
-        </div>
+        </div>)}
 
         <div className="tasks-section">
           <h3>Tasks</h3>
@@ -540,6 +856,12 @@ useEffect(() => {
               <div className="task-card-header">
                 <h4>{task.name}</h4>
 
+                {task.user_id === currentUserId && (
+                 <span className="assigned-to-you">
+                  ⭐ Assigned to you
+                 </span>
+                )}
+
                 <span className={`status-badge ${task.status.toLowerCase()}`}>
                   {task.status === "TODO"
                      ? "To Do"
@@ -562,13 +884,21 @@ useEffect(() => {
               </div>
 
               <div className="task-actions">
-               <button onClick={() => handleEditTask(task)}>
+               <button
+                className="edit-task-button"
+                onClick={() => handleEditTask(task)}
+               >
                 Edit
                </button>
 
-               <button onClick={() => handleDeleteTask(task.id)}>
-                Delete
-               </button>
+               {selectedProject?.user_id === currentUserId && (
+                <button
+                 className="delete-task-button"
+                 onClick={() => handleDeleteTask(task.id)}
+                >
+                  Delete
+                </button>
+              )}
               </div>
             </div>
           ))}
@@ -604,19 +934,87 @@ useEffect(() => {
              setEditingTask(null)
             }}
           >
-           <div className="project-card-content">
-           <h3>{project.project_name}</h3>
-
-           <button
-            className="delete-project-button"
+           <div
+            className="project-card-content"
+            key={project.id}
             onClick={(event) => {
-             event.stopPropagation()
-             handleDeleteProject(project.id)
-           }}
-          >
-           Delete
-          </button>
-        </div>
+              event.stopPropagation()
+
+              if (editingProject?.id === project.id) {
+               return
+              }
+
+              setSelectedProject(project)
+              setEditingTask(null)
+            }}
+           >
+            <div>
+             {editingProject?.id === project.id ? (
+              <input
+               type="text"
+               value={editingProject.project_name}
+               onChange={(event) =>
+                setEditingProject({
+                  ...editingProject,
+                 project_name: event.target.value,
+                })
+               }
+               onClick={(event) => event.stopPropagation()}
+              />
+            ) : (
+              <h3>{project.project_name}</h3>
+            )}
+             <br></br>
+            </div>
+
+            {project.user_id === currentUserId && (
+             <>
+               {editingProject?.id === project.id ? (
+                <>
+                  <button
+                    className="save-project-button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      handleUpdateProject()
+                    }}
+                  >
+                    Save Changes
+                  </button>
+
+                  <button
+                   className="cancel-project-button"
+                   onClick={(event) => {
+                     event.stopPropagation()
+                     setEditingProject(null)
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="edit-project-button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    handleEditProject(project)
+                  }}
+                >
+                  Edit
+                </button>
+              )}
+            </>
+          )}
+
+            <button
+             className="delete-project-button"
+             onClick={(event) => {
+              event.stopPropagation()
+              handleDeleteProject(project.id)
+            }}
+            >
+             Delete
+            </button>
+          </div>
       </div>
         ))}
       </div>
@@ -625,6 +1023,7 @@ useEffect(() => {
 
   </main>
 </div>
+</>
   )
 }
 
@@ -634,28 +1033,51 @@ return (
         <h1>Task Management</h1>
         <p className="subtitle">Sign in to manage your tasks</p>
 
-        <form onSubmit={handleLogin}>
+        <form onSubmit={registerMode ? handleRegister : handleLogin}>
           <label>Username</label>
-          <input
-            type="text"
-            placeholder="Enter your username"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-          />
 
-          <label>Password</label>
-          <input
-            type="password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
+            <input
+             type="text"
+             placeholder="Enter your username"
+             value={username}
+             onChange={(event) => setUsername(event.target.value)}
+            />
 
-          <button type="submit">Login</button>
+           {registerMode && (
+            <>
+           <label>Email</label>
+
+           <input
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+            </>
+        )}
+
+        <label>Password</label>
+
+         <input
+          type="password"
+          placeholder="Enter your password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+         />
+
+         <button type="submit">
+          {registerMode ? "Register" : "Login"}
+         </button>
         </form>
 
         <p className="register-text">
-          Don't have an account? <span>Register</span>
+         {registerMode
+          ? "Already have an account?"
+          : "Don't have an account?"}{" "}
+
+          <span onClick={() => setRegisterMode(!registerMode)}>
+          {registerMode ? "Login" : "Register"}
+          </span>
         </p>
       </div>
     </div>

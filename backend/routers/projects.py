@@ -17,9 +17,14 @@ def get_projects(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user)
 ):
-    projects = db.query(project.Project).filter(
-     project.Project.user_id == user_id
-).all()
+    projects = db.query(project.Project).outerjoin(
+        task.Task,
+        task.Task.project_id == project.Project.id
+    ).filter(
+        (project.Project.user_id == user_id) |
+        (task.Task.user_id == user_id)
+    ).distinct().all()
+
     return projects
 
 
