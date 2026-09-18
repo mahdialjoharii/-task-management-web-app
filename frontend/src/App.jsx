@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import "./App.css"
 
 function App() {
@@ -24,6 +24,11 @@ function App() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [comments, setComments] = useState([]);
+  const commentsRef = useRef(null)
+  const [commentText, setCommentText] = useState("");
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
 
   useEffect(() => {
   const handleClickOutside = () => {
@@ -546,6 +551,131 @@ const handleUpdateTask = async () => {
   }
 }
 
+const fetchComments = async (taskId) => {
+  setCommentsLoading(true);
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8000/comments/?task_id=${taskId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch comments");
+    }
+
+    const data = await response.json();
+    setComments(data);
+  } catch (error) {
+    console.error("Error fetching comments:", error);
+    setComments([]);
+  } finally {
+    setCommentsLoading(false);
+  }
+};
+
+const handleSelectTask = (task) => {
+  setSelectedTask(task)
+  setCommentText("")
+  fetchComments(task.id)
+}
+
+const handleCreateComment = async () => {
+  if (!selectedTask || !commentText.trim()) {
+    return
+  }
+
+  const token = localStorage.getItem("token")
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8000/comments/?task_id=${selectedTask.id}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: commentText,
+        }),
+      }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      alert(data.detail || "Failed to create comment")
+      return
+    }
+
+    setComments((currentComments) => [...currentComments, data])
+    setCommentText("")
+  } catch (error) {
+    console.error("Create comment error:", error)
+  }
+}
+
+const handleDeleteComment = async (commentId) => {
+  const confirmDelete = window.confirm(
+    "Are you sure you want to delete this comment?"
+  )
+
+  if (!confirmDelete) {
+    return
+  }
+
+  const token = localStorage.getItem("token")
+
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:8000/comments/${commentId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      alert(data.detail || "Failed to delete comment")
+      return
+    }
+
+    setComments((currentComments) =>
+      currentComments.filter((comment) => comment.id !== commentId)
+    )
+  } catch (error) {
+    console.error("Delete comment error:", error)
+  }
+}
+
+useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (
+      commentsRef.current &&
+      !commentsRef.current.contains(event.target)
+    ) {
+      setSelectedTask(null)
+      setComments([])
+      setCommentText("")
+    }
+  }
+
+  document.addEventListener("mousedown", handleClickOutside)
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside)
+  }
+}, [])
+
 useEffect(() => {
   if (!loggedIn) {
     return
@@ -877,6 +1007,7 @@ useEffect(() => {
                    key={task.id}
                    draggable={true}
                    onDragStart={() => handleDragStart(task)}
+                   onClick={() => handleSelectTask(task)}
                   >
                    <div className="kanban-task-name">
                    {task.name}
@@ -945,6 +1076,7 @@ useEffect(() => {
                    key={task.id}
                    draggable={true}
                    onDragStart={() => handleDragStart(task)}
+                   onClick={() => handleSelectTask(task)}
                   >
                    <div className="kanban-task-name">
                    {task.name}
@@ -1013,6 +1145,7 @@ useEffect(() => {
                    key={task.id}
                    draggable={true}
                    onDragStart={() => handleDragStart(task)}
+                   onClick={() => handleSelectTask(task)}
                   >
                    <div className="kanban-task-name">
                    {task.name}
@@ -1119,6 +1252,74 @@ useEffect(() => {
 
             </div>
           )}
+
+          {selectedTask && (
+            <div
+              className="comments-section"
+              ref={commentsRef}
+            >
+              <h3>Comments</h3>
+
+              {comments.length === 0 ? (
+              <p>No comments yet.</p>
+            ) : (
+              <div className="comments-list">
+               {comments.map((comment) => {
+                 const commentUser = users.find(
+                  (user) => user.id === comment.user_id
+                 )
+
+                 return (
+                  <div className="comment" key={comment.id}>
+                   <strong>
+                    {commentUser ? commentUser.username : "Unknown User"}
+                   </strong>
+
+                   <p>{comment.content}</p>
+
+                   {(() => {
+                      const taskProject = projects.find(
+                       (project) => project.id === selectedTask.project_id
+                      )
+
+                      const canDeleteComment =
+                        comment.user_id === currentUserId ||
+                        taskProject?.user_id === currentUserId
+
+                      return canDeleteComment ? (
+                        <button
+                          className="delete-comment"
+                          onClick={() => handleDeleteComment(comment.id)}
+                        >
+                         Delete
+                        </button>
+                      ) : null
+                    })()}
+                  </div>
+                 )
+                })}
+              </div>
+            )}
+
+            <div className="comment-form">
+             <input
+              type="text"
+              placeholder="Write a comment..."
+              value={commentText}
+              onChange={(event) => setCommentText(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                handleCreateComment()
+                }
+              }}
+             />
+
+             <button onClick={handleCreateComment}>
+              Add Comment
+             </button>
+            </div>
+          </div>
+        )}
 
           
         </div>
