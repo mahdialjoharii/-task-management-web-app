@@ -1022,14 +1022,27 @@ useEffect(() => {
                    </span>
 
                     {task.due_date && (
-                     <div className="kanban-task-date">
+                      <div className={`kanban-task-date ${getDueDateStatus(task.due_date)}`}>
                        Due: {task.due_date}
-                     </div>
+
+                       {getDueDateStatus(task.due_date) === "overdue" && (
+                        <span> 🔴 Overdue</span>
+                       )}
+
+                       {getDueDateStatus(task.due_date) === "soon" && (
+                        <span> 🟠 Soon</span>
+                       )}
+                      </div>
                     )}
 
-                    {task.user_id === currentUserId && (
+                    {task.user_id === currentUserId ? (
                      <span className="assigned-to-you">
                       ⭐ Assigned to you
+                     </span>
+                    ) : (
+                     <span className="assigned-to">
+                       👤 Assigned to:{" "}
+                       {users.find((user) => user.id === task.user_id)?.username || "Unknown user"}
                      </span>
                     )}
 
@@ -1091,14 +1104,27 @@ useEffect(() => {
                    </span>
 
                     {task.due_date && (
-                     <div className="kanban-task-date">
+                      <div className={`kanban-task-date ${getDueDateStatus(task.due_date)}`}>
                        Due: {task.due_date}
-                     </div>
+
+                       {getDueDateStatus(task.due_date) === "overdue" && (
+                        <span> 🔴 Overdue</span>
+                       )}
+
+                       {getDueDateStatus(task.due_date) === "soon" && (
+                        <span> 🟠 Soon</span>
+                       )}
+                      </div>
                     )}
 
-                    {task.user_id === currentUserId && (
+                    {task.user_id === currentUserId ? (
                      <span className="assigned-to-you">
                       ⭐ Assigned to you
+                     </span>
+                    ) : (
+                     <span className="assigned-to">
+                       👤 Assigned to:{" "}
+                       {users.find((user) => user.id === task.user_id)?.username || "Unknown user"}
                      </span>
                     )}
 
@@ -1160,14 +1186,27 @@ useEffect(() => {
                    </span>
 
                     {task.due_date && (
-                     <div className="kanban-task-date">
+                      <div className={`kanban-task-date ${getDueDateStatus(task.due_date)}`}>
                        Due: {task.due_date}
-                     </div>
+
+                       {getDueDateStatus(task.due_date) === "overdue" && (
+                        <span> 🔴 Overdue</span>
+                       )}
+
+                       {getDueDateStatus(task.due_date) === "soon" && (
+                        <span> 🟠 Soon</span>
+                       )}
+                      </div>
                     )}
 
-                    {task.user_id === currentUserId && (
+                    {task.user_id === currentUserId ? (
                      <span className="assigned-to-you">
                       ⭐ Assigned to you
+                     </span>
+                    ) : (
+                     <span className="assigned-to">
+                       👤 Assigned to:{" "}
+                       {users.find((user) => user.id === task.user_id)?.username || "Unknown user"}
                      </span>
                     )}
 
