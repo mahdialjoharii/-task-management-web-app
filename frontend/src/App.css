@@ -1,4 +1,3 @@
-
 /* global styles */
 
 * {
@@ -374,7 +373,7 @@ select:focus {
   font-size: 25px;
 }
 
-.tasks-section > h3 {
+.tasks-section>h3 {
   margin: 0 0 18px;
   font-size: 20px;
 }
@@ -514,7 +513,7 @@ select:focus {
 }
 
 .project-card::before {
-  content: "≡ƒôü";
+  content: "📁";
   width: 42px;
   height: 42px;
   margin-bottom: 15px;
@@ -896,9 +895,9 @@ select:focus {
     width: 100%;
   }
 
-  .create-task > * {
+  .create-task>* {
     min-width: 0;
- }
+  }
 
   .create-task input,
   .create-task select,
@@ -968,7 +967,7 @@ select:focus {
   gap: 20px;
 }
 
-.dashboard-header > div:first-of-type {
+.dashboard-header>div:first-of-type {
   flex: 1;
 }
 
@@ -1104,7 +1103,7 @@ select:focus {
 
 .account-card h2 {
   margin: 0 0 8px;
-  color :#172554;
+  color: #172554;
 }
 
 .account-card p {
@@ -1351,4 +1350,36 @@ select:focus {
     justify-content: flex-start;
     gap: 12px;
   }
+}
+
+/* Toast Notifications */
+
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+
+  max-width: min(400px, calc(100vw - 40px));
+  padding: 14px 20px;
+
+  border-radius: 10px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  line-height: 1.5;
+
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  overflow-wrap: anywhere;
+}
+
+/* Error Notification */
+.toast-error {
+  background: #dc2626;
+}
+
+/* Success Notification */
+.toast-success {
+  background: #16a34a;
 }
