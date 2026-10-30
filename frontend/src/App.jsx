@@ -12,6 +12,7 @@ function App() {
   const [projectName, setProjectName] = useState("")
   const [selectedProject, setSelectedProject] = useState(null)
   const [tasks, setTasks] = useState([])
+  const [allTasks, setAllTasks] = useState([])
   const [taskName, setTaskName] = useState("")
   const [taskDueDate, setTaskDueDate] = useState("")
   const [taskStatus, setTaskStatus] = useState("TODO")
@@ -30,6 +31,7 @@ function App() {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [toast, setToast] = useState(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -342,12 +344,14 @@ function App() {
     }
   }
 
-  const handleDeleteProject = async (projectId) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this project and all its tasks?"
-    )
-
-    if (!confirmed) return
+  const handleDeleteProject = async (projectId, confirmed = false) => {
+    if (!confirmed) {
+      setDeleteConfirmation({
+        type: "project",
+        id: projectId
+      })
+      return
+    }
 
     const token = localStorage.getItem("token")
 
@@ -377,6 +381,10 @@ function App() {
 
       setProjects((currentProjects) =>
         currentProjects.filter((project) => project.id !== projectId)
+      )
+
+      setAllTasks((currentTasks) =>
+        currentTasks.filter((task) => task.project_id !== projectId)
       )
 
       if (selectedProject?.id === projectId) {
@@ -480,6 +488,7 @@ function App() {
       }
 
       setTasks((currentTasks) => [...currentTasks, data])
+      setAllTasks((currentTasks) => [...currentTasks, data])
       setTaskName("")
       setTaskDueDate("")
       setTaskStatus("TODO")
@@ -549,6 +558,12 @@ function App() {
         )
       )
 
+      setAllTasks((currentTasks) =>
+        currentTasks.map((task) =>
+          task.id === data.id ? data : task
+        )
+      )
+
     } catch (error) {
       console.error("Drag and drop error:", error)
     }
@@ -561,12 +576,15 @@ function App() {
     console.log("Editing task:", task)
   }
 
-  const handleDeleteTask = async (taskId) => {
-    const confirmed = window.confirm("Are you sure you want to delete this task?")
-
+  const handleDeleteTask = async (taskId, confirmed = false) => {
     if (!confirmed) {
+      setDeleteConfirmation({
+        type: "task",
+        id: taskId
+      })
       return
     }
+
     const token = localStorage.getItem("token")
 
     try {
@@ -594,6 +612,10 @@ function App() {
       console.log("Delete task response:", data)
 
       setTasks((currentTasks) =>
+        currentTasks.filter((task) => task.id !== taskId)
+      )
+
+      setAllTasks((currentTasks) =>
         currentTasks.filter((task) => task.id !== taskId)
       )
 
@@ -654,6 +676,12 @@ function App() {
       }
 
       setTasks((currentTasks) =>
+        currentTasks.map((task) =>
+          task.id === data.id ? data : task
+        )
+      )
+
+      setAllTasks((currentTasks) =>
         currentTasks.map((task) =>
           task.id === data.id ? data : task
         )
@@ -858,6 +886,38 @@ function App() {
 
   useEffect(() => {
     if (!loggedIn) {
+      setAllTasks([])
+      return
+    }
+
+    const token = localStorage.getItem("token")
+
+    fetch("http://127.0.0.1:8000/tasks/", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch all tasks")
+        }
+        return response.json()
+      })
+      .then((data) => {
+        if (!Array.isArray(data)) {
+          throw new Error("Invalid tasks response")
+        }
+
+        console.log("All tasks:", data)
+        setAllTasks(data)
+      })
+      .catch((error) => {
+        console.error("All tasks error:", error)
+      })
+  }, [loggedIn])
+
+  useEffect(() => {
+    if (!loggedIn) {
       return
     }
 
@@ -926,22 +986,71 @@ function App() {
   }, [selectedProject])
   if (loggedIn) {
 
-    const totalTasks = tasks.length
+    const totalTasks = allTasks.length
 
-    const completedTasks = tasks.filter(
+    const completedTasks = allTasks.filter(
       (task) => task.status === "DONE"
     ).length
 
-    const inProgressTasks = tasks.filter(
+    const inProgressTasks = allTasks.filter(
       (task) => task.status === "IN_PROGRESS"
     ).length
 
-    const todoTasks = tasks.filter(
+    const todoTasks = allTasks.filter(
       (task) => task.status === "TODO"
     ).length
 
     return (
       <>
+
+        {deleteConfirmation && (
+          <div className="account-overlay">
+            <div
+              className="account-card"
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="delete-confirmation-title"
+              aria-describedby="delete-confirmation-description"
+            >
+              <h2 id="delete-confirmation-title">
+                Confirm Deletion
+              </h2>
+
+              <p id="delete-confirmation-description">
+                Are you sure you want to delete this item?
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmation(null)}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="delete-task-button"
+                onClick={() => {
+                  const { type, id } = deleteConfirmation
+
+                  setDeleteConfirmation(null)
+
+                  if (type === "task") {
+                    handleDeleteTask(id, true)
+                  } else if (type === "project") {
+                    handleDeleteProject(id, true)
+                  }
+                }}
+              >
+                {deleteConfirmation.type === "task"
+                  ? "Delete Task"
+                  : "Delete Project"}
+              </button>
+
+            </div>
+          </div>
+        )}
+
         {toast && (
           <div className={`toast toast-${toast.type}`} role="alert">
             {toast.message}
