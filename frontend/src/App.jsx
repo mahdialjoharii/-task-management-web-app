@@ -25,6 +25,7 @@ function App() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [activePage, setActivePage] = useState("dashboard")
   const [comments, setComments] = useState([]);
   const commentsRef = useRef(null)
   const [commentText, setCommentText] = useState("");
@@ -985,7 +986,6 @@ function App() {
       })
   }, [selectedProject])
   if (loggedIn) {
-
     const totalTasks = allTasks.length
 
     const completedTasks = allTasks.filter(
@@ -999,6 +999,15 @@ function App() {
     const todoTasks = allTasks.filter(
       (task) => task.status === "TODO"
     ).length
+
+    const completionPercentage =
+      totalTasks === 0
+        ? 0
+        : Math.round((completedTasks / totalTasks) * 100)
+
+    const recentTasks = [...allTasks]
+      .sort((a, b) => b.id - a.id)
+      .slice(0, 5)
 
     return (
       <>
@@ -1097,14 +1106,16 @@ function App() {
             </div>
 
             <nav className="sidebar-nav">
-              <button className="active">🏠 Dashboard</button>
+              <button
+                className={activePage === "dashboard" ? "active" : ""}
+                onClick={() => setActivePage("dashboard")}
+              >
+                🏠 Dashboard
+              </button>
 
               <button
-                onClick={() => {
-                  document
-                    .querySelector(".projects-section")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }}
+                className={activePage === "projects" ? "active" : ""}
+                onClick={() => setActivePage("projects")}
               >
                 📁 Projects
               </button>
@@ -1125,10 +1136,15 @@ function App() {
               ☰
             </button>
 
-            <div>
-              <h1>Dashboard</h1>
-              <p>Welcome back, {currentUsername} !</p>
-            </div>
+            <h1>
+              {activePage === "dashboard" ? "Dashboard" : "Projects"}
+            </h1>
+
+            <p>
+              {activePage === "dashboard"
+                ? `Welcome back, ${currentUsername}!`
+                : "Manage your projects and tasks"}
+            </p>
 
             <div className="profile-section">
 
@@ -1172,42 +1188,128 @@ function App() {
           </header>
 
           <main className="dashboard-content">
+            {activePage === "dashboard" && (
 
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-card-top">
-                  <span>Total Tasks</span>
-                  <span className="stat-icon">📋</span>
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-card-top">
+                    <span>Total Tasks</span>
+                    <span className="stat-icon">📋</span>
+                  </div>
+                  <strong>{totalTasks}</strong>
                 </div>
-                <strong>{totalTasks}</strong>
-              </div>
 
-              <div className="stat-card">
-                <div className="stat-card-top">
-                  <span>To Do</span>
-                  <span className="stat-icon">📝</span>
+                <div className="stat-card">
+                  <div className="stat-card-top">
+                    <span>To Do</span>
+                    <span className="stat-icon">📝</span>
+                  </div>
+                  <strong>{todoTasks}</strong>
                 </div>
-                <strong>{todoTasks}</strong>
-              </div>
 
-              <div className="stat-card">
-                <div className="stat-card-top">
-                  <span>In Progress</span>
-                  <span className="stat-icon">🔄</span>
+                <div className="stat-card">
+                  <div className="stat-card-top">
+                    <span>In Progress</span>
+                    <span className="stat-icon">🔄</span>
+                  </div>
+                  <strong>{inProgressTasks}</strong>
                 </div>
-                <strong>{inProgressTasks}</strong>
-              </div>
 
-              <div className="stat-card">
-                <div className="stat-card-top">
-                  <span>Completed</span>
-                  <span className="stat-icon">✅</span>
+                <div className="stat-card">
+                  <div className="stat-card-top">
+                    <span>Completed</span>
+                    <span className="stat-icon">✅</span>
+                  </div>
+                  <strong>{completedTasks}</strong>
                 </div>
-                <strong>{completedTasks}</strong>
               </div>
-            </div>
+            )}
 
-            {selectedProject && (
+            {activePage === "dashboard" && (
+              <section className="task-progress-section">
+                <div className="task-progress-header">
+                  <h2>Task Progress</h2>
+                  <strong>{completionPercentage}%</strong>
+                </div>
+
+                <p>Overall task completion</p>
+
+                <div
+                  className="task-progress-track"
+                  role="progressbar"
+                  aria-label="Overall task completion"
+                  aria-valuenow={completionPercentage}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <div
+                    className="task-progress-fill"
+                    style={{ width: `${completionPercentage}%` }}
+                  />
+                </div>
+
+                <p>
+                  {completedTasks} of {totalTasks} tasks completed
+                </p>
+              </section>
+            )}
+
+            {activePage === "dashboard" && (
+              <section className="recent-tasks-section">
+                <h2>Recent Tasks</h2>
+
+                {recentTasks.length === 0 ? (
+                  <p>No tasks available yet.</p>
+                ) : (
+                  <div className="recent-tasks-list">
+                    {recentTasks.map((task) => {
+                      const taskProject = projects.find(
+                        (project) => project.id === task.project_id
+                      )
+
+                      return (
+                        <div className="recent-task-item" key={task.id}>
+                          <div>
+                            <h3>{task.name}</h3>
+                            <p>
+                              {taskProject?.project_name || "Unknown Project"}
+                            </p>
+                          </div>
+
+                          <span
+                            className={`status-badge ${task.status.toLowerCase()}`}
+                          >
+                            {task.status === "TODO"
+                              ? "To Do"
+                              : task.status === "IN_PROGRESS"
+                                ? "In Progress"
+                                : "Done"}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {activePage === "dashboard" && (
+              <section className="quick-actions-section">
+                <div>
+                  <h2>Quick Actions</h2>
+                  <p>Manage your projects and stay on top of your tasks.</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActivePage("projects")}
+                >
+                  📁 View Projects
+                </button>
+              </section>
+            )}
+
+            {activePage === "projects" && selectedProject && (
               <section className="selected-project-section">
 
                 <div className="section-header">
@@ -1634,119 +1736,123 @@ function App() {
               </section>
             )}
 
-            <section className="projects-section">
+            {activePage === "projects" && (
 
-              <div className="create-project">
-                <input
-                  type="text"
-                  placeholder="Enter project name"
-                  value={projectName}
-                  onChange={(event) => setProjectName(event.target.value)}
-                />
+              <section className="projects-section">
 
-                <button onClick={handleCreateProject}>
-                  Create Project
-                </button>
-              </div>
+                <div className="create-project">
+                  <input
+                    type="text"
+                    placeholder="Enter project name"
+                    value={projectName}
+                    onChange={(event) => setProjectName(event.target.value)}
+                  />
 
-              <h2>My Projects</h2>
+                  <button onClick={handleCreateProject}>
+                    Create Project
+                  </button>
+                </div>
 
-              <div className="projects-grid">
-                {projects.map((project) => (
-                  <div
-                    className="project-card"
-                    key={project.id}
-                    onClick={() => {
-                      setSelectedProject(project)
-                      setEditingTask(null)
-                    }}
-                  >
+                <h2>My Projects</h2>
+
+                <div className="projects-grid">
+                  {projects.map((project) => (
                     <div
-                      className="project-card-content"
+                      className="project-card"
                       key={project.id}
-                      onClick={(event) => {
-                        event.stopPropagation()
-
-                        if (editingProject?.id === project.id) {
-                          return
-                        }
-
+                      onClick={() => {
                         setSelectedProject(project)
                         setEditingTask(null)
                       }}
                     >
-                      <div>
-                        {editingProject?.id === project.id ? (
-                          <input
-                            type="text"
-                            value={editingProject.project_name}
-                            onChange={(event) =>
-                              setEditingProject({
-                                ...editingProject,
-                                project_name: event.target.value,
-                              })
-                            }
-                            onClick={(event) => event.stopPropagation()}
-                          />
-                        ) : (
-                          <h3>{project.project_name}</h3>
-                        )}
-                        <br></br>
-                      </div>
-
-                      {project.user_id === currentUserId && (
-                        <>
-                          {editingProject?.id === project.id ? (
-                            <>
-                              <button
-                                className="save-project-button"
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  handleUpdateProject()
-                                }}
-                              >
-                                Save Changes
-                              </button>
-
-                              <button
-                                className="cancel-project-button"
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  setEditingProject(null)
-                                }}
-                              >
-                                Cancel
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              className="edit-project-button"
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                handleEditProject(project)
-                              }}
-                            >
-                              Edit
-                            </button>
-                          )}
-                        </>
-                      )}
-
-                      <button
-                        className="delete-project-button"
+                      <div
+                        className="project-card-content"
+                        key={project.id}
                         onClick={(event) => {
                           event.stopPropagation()
-                          handleDeleteProject(project.id)
+
+                          if (editingProject?.id === project.id) {
+                            return
+                          }
+
+                          setSelectedProject(project)
+                          setEditingTask(null)
                         }}
                       >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                        <div>
+                          {editingProject?.id === project.id ? (
+                            <input
+                              type="text"
+                              value={editingProject.project_name}
+                              onChange={(event) =>
+                                setEditingProject({
+                                  ...editingProject,
+                                  project_name: event.target.value,
+                                })
+                              }
+                              onClick={(event) => event.stopPropagation()}
+                            />
+                          ) : (
+                            <h3>{project.project_name}</h3>
+                          )}
+                          <br></br>
+                        </div>
 
-            </section>
+                        {project.user_id === currentUserId && (
+                          <>
+                            {editingProject?.id === project.id ? (
+                              <>
+                                <button
+                                  className="save-project-button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    handleUpdateProject()
+                                  }}
+                                >
+                                  Save Changes
+                                </button>
+
+                                <button
+                                  className="cancel-project-button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    setEditingProject(null)
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                className="edit-project-button"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleEditProject(project)
+                                }}
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        <button
+                          className="delete-project-button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleDeleteProject(project.id)
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+              </section>
+
+            )}
 
           </main>
         </div>
