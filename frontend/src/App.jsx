@@ -10,6 +10,7 @@ function App() {
   const [loggedIn, setLoggedIn] = useState(false)
   const [projects, setProjects] = useState([])
   const [projectName, setProjectName] = useState("")
+  const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState(null)
   const [tasks, setTasks] = useState([])
   const [allTasks, setAllTasks] = useState([])
@@ -33,6 +34,23 @@ function App() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [toast, setToast] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+
+  useEffect(() => {
+    if (!createProjectOpen) return
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setCreateProjectOpen(false)
+        setProjectName("")
+      }
+    }
+
+    document.addEventListener("keydown", handleEscape)
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape)
+    }
+  }, [createProjectOpen])
 
   useEffect(() => {
     if (!toast) return;
@@ -253,6 +271,7 @@ function App() {
 
       setProjects((currentProjects) => [...currentProjects, data])
       setProjectName("")
+      setCreateProjectOpen(false)
 
       setToast({
         message: "Project created successfully!",
@@ -1012,6 +1031,47 @@ function App() {
     return (
       <>
 
+        {createProjectOpen && (
+          <div className="account-overlay">
+            <div
+              className="account-card create-project-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="create-project-title"
+            >
+              <h2 id="create-project-title">
+                Create New Project
+              </h2>
+
+              <input
+                type="text"
+                placeholder="Enter project name"
+                value={projectName}
+                onChange={(event) => setProjectName(event.target.value)}
+              />
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateProjectOpen(false)
+                    setProjectName("")
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCreateProject}
+                >
+                  Create Project
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {deleteConfirmation && (
           <div className="account-overlay">
             <div
@@ -1136,15 +1196,17 @@ function App() {
               ☰
             </button>
 
-            <h1>
-              {activePage === "dashboard" ? "Dashboard" : "Projects"}
-            </h1>
+            <div className="header-title">
+              <h1>
+                {activePage === "dashboard" ? "Dashboard" : "Projects"}
+              </h1>
 
-            <p>
-              {activePage === "dashboard"
-                ? `Welcome back, ${currentUsername}!`
-                : "Manage your projects and tasks"}
-            </p>
+              <p>
+                {activePage === "dashboard"
+                  ? `Welcome back, ${currentUsername}!`
+                  : "Manage your projects and tasks"}
+              </p>
+            </div>
 
             <div className="profile-section">
 
@@ -1740,20 +1802,17 @@ function App() {
 
               <section className="projects-section">
 
-                <div className="create-project">
-                  <input
-                    type="text"
-                    placeholder="Enter project name"
-                    value={projectName}
-                    onChange={(event) => setProjectName(event.target.value)}
-                  />
+                <div className="projects-header">
+                  <h2>My Projects</h2>
 
-                  <button onClick={handleCreateProject}>
-                    Create Project
+                  <button
+                    type="button"
+                    className="new-project-button"
+                    onClick={() => setCreateProjectOpen(true)}
+                  >
+                    + New Project
                   </button>
                 </div>
-
-                <h2>My Projects</h2>
 
                 <div className="projects-grid">
                   {projects.map((project) => (
