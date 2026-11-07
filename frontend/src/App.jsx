@@ -15,6 +15,7 @@ function App() {
   const [tasks, setTasks] = useState([])
   const [allTasks, setAllTasks] = useState([])
   const [taskName, setTaskName] = useState("")
+  const [taskModalOpen, setTaskModalOpen] = useState(false)
   const [taskDueDate, setTaskDueDate] = useState("")
   const [taskStatus, setTaskStatus] = useState("TODO")
   const [users, setUsers] = useState([])
@@ -513,6 +514,7 @@ function App() {
       setTaskDueDate("")
       setTaskStatus("TODO")
       setAssignedUserId(currentUserId)
+      setTaskModalOpen(false)
 
       setToast({
         message: "Task created successfully!",
@@ -544,7 +546,6 @@ function App() {
       setDraggedTask(null)
       return
     }
-
     const token = localStorage.getItem("token")
 
     try {
@@ -592,8 +593,14 @@ function App() {
   }
 
   const handleEditTask = (task) => {
-    setEditingTask(task)
-    console.log("Editing task:", task)
+    setEditingTask({ ...task })
+
+    setTaskName(task.name)
+    setTaskDueDate(task.due_date || "")
+    setTaskStatus(task.status)
+    setAssignedUserId(task.user_id)
+
+    setTaskModalOpen(true)
   }
 
   const handleDeleteTask = async (taskId, confirmed = false) => {
@@ -678,6 +685,7 @@ function App() {
             name: editingTask.name,
             status: editingTask.status,
             due_date: editingTask.due_date,
+            assigned_user_id: editingTask.user_id,
           }),
         }
       )
@@ -706,6 +714,8 @@ function App() {
           task.id === data.id ? data : task
         )
       )
+
+      setTaskModalOpen(false)
 
       setEditingTask(null)
 
@@ -1030,6 +1040,138 @@ function App() {
 
     return (
       <>
+
+        {taskModalOpen && (
+          <div className="account-overlay">
+            <div
+              className="account-card task-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="task-modal-title"
+            >
+              <h2 id="task-modal-title">
+                {editingTask ? "Edit Task" : "Add Task"}
+              </h2>
+
+              <div className="task-modal-fields">
+
+                <div className="task-modal-field">
+                  <label htmlFor="modal-task-name">Task Name</label>
+                  <input
+                    id="modal-task-name"
+                    type="text"
+                    placeholder="Enter task name"
+                    value={taskName}
+                    onChange={(event) => {
+                      const newName = event.target.value
+
+                      setTaskName(newName)
+
+                      if (editingTask) {
+                        setEditingTask((currentTask) => ({
+                          ...currentTask,
+                          name: newName
+                        }))
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className="task-modal-field">
+                  <label htmlFor="modal-task-date">Due Date</label>
+                  <input
+                    id="modal-task-date"
+                    type="date"
+                    value={taskDueDate}
+                    onChange={(event) => {
+                      const newDate = event.target.value
+
+                      setTaskDueDate(newDate)
+
+                      if (editingTask) {
+                        setEditingTask((currentTask) => ({
+                          ...currentTask,
+                          due_date: newDate
+                        }))
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className="task-modal-field">
+                  <label htmlFor="modal-task-status">Status</label>
+                  <select
+                    id="modal-task-status"
+                    value={taskStatus}
+                    onChange={(event) => {
+                      const newStatus = event.target.value
+
+                      setTaskStatus(newStatus)
+
+                      if (editingTask) {
+                        setEditingTask((currentTask) => ({
+                          ...currentTask,
+                          status: newStatus
+                        }))
+                      }
+                    }}
+                  >
+                    <option value="TODO">To Do</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="DONE">Done</option>
+                  </select>
+                </div>
+
+                <div className="task-modal-field">
+                  <label htmlFor="modal-task-assignee">Assigned To</label>
+                  <select
+                    id="modal-task-assignee"
+                    value={assignedUserId}
+                    onChange={(event) => {
+                      const newUserId = event.target.value
+
+                      setAssignedUserId(newUserId)
+
+                      if (editingTask) {
+                        setEditingTask((currentTask) => ({
+                          ...currentTask,
+                          user_id: Number(newUserId)
+                        }))
+                      }
+                    }}
+                  >
+                    <option value="">Select a user</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.username}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+              </div>
+
+              <div className="task-modal-actions">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTaskModalOpen(false)
+                    setEditingTask(null)
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={editingTask ? handleUpdateTask : handleCreateTask}
+                >
+                  {editingTask ? "Save Changes" : "Create Task"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {createProjectOpen && (
           <div className="account-overlay">
@@ -1379,47 +1521,26 @@ function App() {
                     <span className="section-label">CURRENT PROJECT</span>
                     <h2>{selectedProject.project_name}</h2>
                   </div>
+
+                  {selectedProject?.user_id === currentUserId && (
+                    <div className="add-task-action">
+                      <button
+                        type="button"
+                        className="add-task-button"
+                        onClick={() => {
+                          setEditingTask(null)
+                          setTaskName("")
+                          setTaskDueDate("")
+                          setTaskStatus("TODO")
+                          setAssignedUserId(currentUserId)
+                          setTaskModalOpen(true)
+                        }}
+                      >
+                        + Add Task
+                      </button>
+                    </div>
+                  )}
                 </div>
-
-                {selectedProject?.user_id === currentUserId && (
-                  <div className="create-task">
-                    <input
-                      type="text"
-                      placeholder="Enter task name"
-                      value={taskName}
-                      onChange={(event) => setTaskName(event.target.value)}
-                    />
-
-                    <input
-                      type="date"
-                      value={taskDueDate}
-                      onChange={(event) => setTaskDueDate(event.target.value)}
-                    />
-
-                    <select
-                      value={taskStatus}
-                      onChange={(event) => setTaskStatus(event.target.value)}
-                    >
-                      <option value="TODO">To Do</option>
-                      <option value="IN_PROGRESS">In Progress</option>
-                      <option value="DONE">Done</option>
-                    </select>
-
-                    <select
-                      value={assignedUserId}
-                      onChange={(e) => setAssignedUserId(Number(e.target.value))}
-                    >
-                      {users.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.username}
-                        </option>
-                      ))}
-                    </select>
-
-                    <button onClick={handleCreateTask}>
-                      Create Task
-                    </button>
-                  </div>)}
 
                 <div className="tasks-section">
 
@@ -1671,58 +1792,6 @@ function App() {
                     </div>
                   </div>
 
-                  <h3>Tasks</h3>
-
-                  {editingTask && (
-                    <div className="edit-task">
-                      <h3>Edit Task</h3>
-
-                      <input
-                        type="text"
-                        value={editingTask.name}
-                        onChange={(event) =>
-                          setEditingTask({
-                            ...editingTask,
-                            name: event.target.value,
-                          })
-                        }
-                      />
-
-                      <select
-                        value={editingTask.status}
-                        onChange={(event) =>
-                          setEditingTask({
-                            ...editingTask,
-                            status: event.target.value,
-                          })
-                        }
-                      >
-                        <option value="TODO">To Do</option>
-                        <option value="IN_PROGRESS">In Progress</option>
-                        <option value="DONE">Done</option>
-                      </select>
-
-                      <input
-                        type="date"
-                        value={editingTask.due_date || ""}
-                        onChange={(event) =>
-                          setEditingTask({
-                            ...editingTask,
-                            due_date: event.target.value,
-                          })
-                        }
-                      />
-
-                      <button onClick={handleUpdateTask}>
-                        Save Changes
-                      </button>
-
-                      <button onClick={() => setEditingTask(null)}>
-                        Cancel
-                      </button>
-
-                    </div>
-                  )}
 
                   {selectedTask && (
                     <div

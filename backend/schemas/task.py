@@ -27,6 +27,7 @@ class TaskUpdate(BaseModel):
     name: str | None = None
     status: TaskStatus | None = None
     due_date: date | None = None 
+    assigned_user_id: int | None = None
 
     @field_validator("name")
     @classmethod

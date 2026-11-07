@@ -132,6 +132,30 @@ def update_task(
     if "due_date" in task_data.model_fields_set:
         existing_task.due_date = task_data.due_date
 
+    if task_data.assigned_user_id is not None:
+
+       task_project = db.query(project.Project).filter(
+        project.Project.id == existing_task.project_id
+       ).first()
+
+       if task_project is None or task_project.user_id != user_id:
+          raise HTTPException(
+              status_code=403,
+              detail="Only the project owner can reassign tasks"
+          )
+
+       new_assigned_user = db.query(user.User).filter(
+            user.User.id == task_data.assigned_user_id
+        ).first()
+
+       if new_assigned_user is None:
+           raise HTTPException(
+             status_code=400,
+             detail="Assigned user does not exist"
+           )
+
+       existing_task.user_id = task_data.assigned_user_id
+
     db.commit()
     db.refresh(existing_task)
 
