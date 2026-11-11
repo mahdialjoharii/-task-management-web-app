@@ -1515,7 +1515,18 @@ function App() {
 
             {activePage === "projects" && selectedProject && (
               <section className="selected-project-section">
-
+                <button
+                  type="button"
+                  className="back-to-projects"
+                  onClick={() => {
+                    setSelectedProject(null)
+                    setEditingTask(null)
+                    setSelectedTask(null)
+                    setTaskModalOpen(false)
+                  }}
+                >
+                  ← Back to Projects
+                </button>
                 <div className="section-header">
                   <div>
                     <span className="section-label">CURRENT PROJECT</span>
@@ -1867,7 +1878,7 @@ function App() {
               </section>
             )}
 
-            {activePage === "projects" && (
+            {activePage === "projects" && !selectedProject && (
 
               <section className="projects-section">
 

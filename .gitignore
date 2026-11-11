@@ -10,3 +10,6 @@ __pycache__/
 
 # SQLite database
 *.db
+
+# Python virtual environments
+.venv/
