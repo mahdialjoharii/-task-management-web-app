@@ -600,6 +600,12 @@ function App() {
     setTaskStatus(task.status)
     setAssignedUserId(task.user_id)
 
+
+    setSelectedTask(task)
+    setCommentText("")
+    fetchComments(task.id)
+
+
     setTaskModalOpen(true)
   }
 
@@ -762,9 +768,7 @@ function App() {
   };
 
   const handleSelectTask = (task) => {
-    setSelectedTask(task)
-    setCommentText("")
-    fetchComments(task.id)
+    handleEditTask(task)
   }
 
   const handleCreateComment = async () => {
@@ -817,12 +821,12 @@ function App() {
     }
   }
 
-  const handleDeleteComment = async (commentId) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this comment?"
-    )
-
-    if (!confirmDelete) {
+  const handleDeleteComment = async (commentId, confirmed = false) => {
+    if (!confirmed) {
+      setDeleteConfirmation({
+        type: "comment",
+        id: commentId
+      })
       return
     }
 
@@ -867,25 +871,6 @@ function App() {
       })
     }
   }
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        commentsRef.current &&
-        !commentsRef.current.contains(event.target)
-      ) {
-        setSelectedTask(null)
-        setComments([])
-        setCommentText("")
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
 
   useEffect(() => {
     if (!loggedIn) {
@@ -1151,12 +1136,92 @@ function App() {
 
               </div>
 
+              {editingTask && selectedTask && (
+                <div
+                  className="comments-section"
+                  ref={commentsRef}
+                >
+                  <h3>Comments</h3>
+
+                  {comments.length === 0 ? (
+                    <p>No comments yet.</p>
+                  ) : (
+                    <div className="comments-list">
+                      {comments.map((comment) => {
+                        const commentUser = users.find(
+                          (user) => user.id === comment.user_id
+                        )
+
+                        return (
+                          <div className="comment" key={comment.id}>
+                            <strong>
+                              {commentUser ? commentUser.username : "Unknown User"}
+                            </strong>
+
+                            <p>{comment.content}</p>
+
+                            {comment.created_at && (
+                              <span className="comment-timestamp">
+                                {new Date(comment.created_at).toLocaleString("en-GB", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: true
+                                })}
+                              </span>
+                            )}
+
+                            {(() => {
+                              const taskProject = projects.find(
+                                (project) => project.id === selectedTask.project_id
+                              )
+
+                              const canDeleteComment =
+                                comment.user_id === currentUserId ||
+                                taskProject?.user_id === currentUserId
+
+                              return canDeleteComment ? (
+                                <button
+                                  className="delete-comment"
+                                  onClick={() => handleDeleteComment(comment.id)}
+                                >
+                                  Delete
+                                </button>
+                              ) : null
+                            })()}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  <div className="comment-form">
+                    <input
+                      type="text"
+                      placeholder="Write a comment..."
+                      value={commentText}
+                      onChange={(event) => setCommentText(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          handleCreateComment()
+                        }
+                      }}
+                    />
+
+                    <button onClick={handleCreateComment}>
+                      Add Comment
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="task-modal-actions">
                 <button
                   type="button"
-                  onClick={() => {
+                  onPointerDown={() => {
                     setTaskModalOpen(false)
-                    setEditingTask(null)
                   }}
                 >
                   Cancel
@@ -1250,12 +1315,16 @@ function App() {
                     handleDeleteTask(id, true)
                   } else if (type === "project") {
                     handleDeleteProject(id, true)
+                  } else if (type === "comment") {
+                    handleDeleteComment(id, true)
                   }
                 }}
               >
                 {deleteConfirmation.type === "task"
                   ? "Delete Task"
-                  : "Delete Project"}
+                  : deleteConfirmation.type === "project"
+                    ? "Delete Project"
+                    : "Delete Comment"}
               </button>
 
             </div>
@@ -1802,76 +1871,6 @@ function App() {
                         ))}
                     </div>
                   </div>
-
-
-                  {selectedTask && (
-                    <div
-                      className="comments-section"
-                      ref={commentsRef}
-                    >
-                      <h3>Comments</h3>
-
-                      {comments.length === 0 ? (
-                        <p>No comments yet.</p>
-                      ) : (
-                        <div className="comments-list">
-                          {comments.map((comment) => {
-                            const commentUser = users.find(
-                              (user) => user.id === comment.user_id
-                            )
-
-                            return (
-                              <div className="comment" key={comment.id}>
-                                <strong>
-                                  {commentUser ? commentUser.username : "Unknown User"}
-                                </strong>
-
-                                <p>{comment.content}</p>
-
-                                {(() => {
-                                  const taskProject = projects.find(
-                                    (project) => project.id === selectedTask.project_id
-                                  )
-
-                                  const canDeleteComment =
-                                    comment.user_id === currentUserId ||
-                                    taskProject?.user_id === currentUserId
-
-                                  return canDeleteComment ? (
-                                    <button
-                                      className="delete-comment"
-                                      onClick={() => handleDeleteComment(comment.id)}
-                                    >
-                                      Delete
-                                    </button>
-                                  ) : null
-                                })()}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-
-                      <div className="comment-form">
-                        <input
-                          type="text"
-                          placeholder="Write a comment..."
-                          value={commentText}
-                          onChange={(event) => setCommentText(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              handleCreateComment()
-                            }
-                          }}
-                        />
-
-                        <button onClick={handleCreateComment}>
-                          Add Comment
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
 
                 </div>
 

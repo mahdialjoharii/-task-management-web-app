@@ -1168,6 +1168,19 @@ select:focus {
   font-weight: 600;
 }
 
+/* Keep task modal aligned consistently */
+.account-overlay:has(.task-modal) {
+  align-items: flex-start;
+  overflow-y: auto;
+  padding: 24px 12px;
+  box-sizing: border-box;
+}
+
+.account-overlay .task-modal {
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
 /* task drag and drop */
 
 .task-drop-zones {
@@ -1812,10 +1825,13 @@ select:focus {
 
 .task-modal {
   width: min(480px, 92vw);
-  max-height: 90vh;
+  height: auto;
+  max-height: 85vh;
   overflow-y: auto;
   padding: 28px;
   text-align: left;
+  display: flex;
+  flex-direction: column;
 }
 
 .task-modal h2 {
@@ -1918,4 +1934,13 @@ select:focus {
 .back-to-projects:hover {
   background: #eef2ff;
   color: #4338ca;
+}
+
+/* Comment Timestamp */
+
+.comment-timestamp {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
 }
