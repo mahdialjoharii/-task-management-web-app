@@ -24,3 +24,4 @@ rsa==4.9.1
 six==1.17.0
 psycopg2-binary==2.9.12
 python-dotenv==1.2.3
+python-multipart==0.0.32
