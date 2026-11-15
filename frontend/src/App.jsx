@@ -482,7 +482,7 @@ function App() {
           project_id: selectedProject.id,
           assigned_user_id: Number(assignedUserId),
           status: taskStatus,
-          due_date: taskDueDate,
+          due_date: taskDueDate || null,
         }),
       })
 
@@ -559,6 +559,7 @@ function App() {
           },
           body: JSON.stringify({
             status: newStatus,
+            due_date: taskDueDate || null,
           }),
         }
       )
@@ -690,7 +691,7 @@ function App() {
           body: JSON.stringify({
             name: editingTask.name,
             status: editingTask.status,
-            due_date: editingTask.due_date,
+            due_date: editingTask.due_date || null,
             assigned_user_id: editingTask.user_id,
           }),
         }
