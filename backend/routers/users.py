@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from dependencies import get_db
 from models import user
-from schemas.user import UserCreate, UserResponse
+from schemas.user import UserCreate, UserResponse, UserPublicResponse
 from auth import hash_password,verify_password, create_access_token, get_current_user
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import datetime, timezone
@@ -16,7 +16,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[UserResponse])
+@router.get("/", response_model=list[UserPublicResponse])
 def get_users(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user)
