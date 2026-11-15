@@ -118,16 +118,9 @@ def update_comment(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user)
 ):
-    existing_comment = db.query(comment.Comment).join(
-        task.Task,
-        comment.Comment.task_id == task.Task.id
-    ).join(
-        project.Project,
-        task.Task.project_id == project.Project.id
-    ).filter(
+    existing_comment = db.query(comment.Comment).filter(
         comment.Comment.id == comment_id,
-        (comment.Comment.user_id == user_id) |
-        (project.Project.user_id == user_id)
+        comment.Comment.user_id == user_id
     ).first()
 
     if existing_comment is None:
