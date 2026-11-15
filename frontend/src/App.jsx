@@ -84,7 +84,7 @@ function App() {
 
     const restoreSession = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/users/me", {
+        const response = await apiFetch("http://127.0.0.1:8000/users/me", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -126,13 +126,85 @@ function App() {
     }
   }, [profileOpen])
 
-  const handleLogout = () => {
+  const clearSession = () => {
     localStorage.removeItem("token")
+
     setLoggedIn(false)
     setCurrentUserId(null)
     setCurrentUsername("")
+
     setSelectedProject(null)
+    setProjects([])
     setTasks([])
+    setAllTasks([])
+    setUsers([])
+
+    setSelectedTask(null)
+    setEditingTask(null)
+    setComments([])
+    setCommentText("")
+    setTaskModalOpen(false)
+
+    setDeleteConfirmation(null)
+    setActivePage("dashboard")
+  }
+
+  const handleLogout = async () => {
+    const token = localStorage.getItem("token")
+
+    if (token) {
+      try {
+        const response = await fetch(
+          "http://127.0.0.1:8000/users/logout",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+
+        if (!response.ok && response.status !== 401) {
+          throw new Error("Failed to revoke token")
+        }
+
+      } catch (error) {
+        console.error("Logout error:", error)
+
+        setToast({
+          message: "Unable to log out securely. Please try again.",
+          type: "error"
+        })
+
+        return
+      }
+    }
+
+    clearSession()
+  }
+
+  const handleSessionExpired = () => {
+    clearSession()
+
+    setToast({
+      message: "Your session has expired. Please log in again.",
+      type: "error"
+    })
+  }
+
+  const apiFetch = async (url, options = {}) => {
+    const response = await fetch(url, options)
+
+    if (response.status === 401) {
+      const currentToken = localStorage.getItem("token")
+      const requestToken = new Headers(options.headers).get("Authorization")
+
+      if (currentToken && requestToken === `Bearer ${currentToken}`) {
+        handleSessionExpired()
+      }
+    }
+
+    return response
   }
 
   const handleLogin = async (event) => {
@@ -144,7 +216,7 @@ function App() {
     formData.append("password", password)
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/users/login", {
+      const response = await apiFetch("http://127.0.0.1:8000/users/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -160,7 +232,7 @@ function App() {
       if (response.ok) {
         localStorage.setItem("token", data.access_token)
         setLoggedIn(true)
-        const meResponse = await fetch("http://127.0.0.1:8000/users/me", {
+        const meResponse = await apiFetch("http://127.0.0.1:8000/users/me", {
           headers: {
             Authorization: `Bearer ${data.access_token}`,
           },
@@ -195,7 +267,7 @@ function App() {
     }
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/users/", {
+      const response = await apiFetch("http://127.0.0.1:8000/users/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -249,7 +321,7 @@ function App() {
     const token = localStorage.getItem("token")
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/projects/", {
+      const response = await apiFetch("http://127.0.0.1:8000/projects/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -307,7 +379,7 @@ function App() {
     const token = localStorage.getItem("token")
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `http://127.0.0.1:8000/projects/${editingProject.id}`,
         {
           method: "PUT",
@@ -377,7 +449,7 @@ function App() {
     const token = localStorage.getItem("token")
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `http://127.0.0.1:8000/projects/${projectId}`,
         {
           method: "DELETE",
@@ -471,7 +543,7 @@ function App() {
     }
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/tasks/", {
+      const response = await apiFetch("http://127.0.0.1:8000/tasks/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -549,7 +621,7 @@ function App() {
     const token = localStorage.getItem("token")
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `http://127.0.0.1:8000/tasks/${draggedTask.id}`,
         {
           method: "PUT",
@@ -622,7 +694,7 @@ function App() {
     const token = localStorage.getItem("token")
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `http://127.0.0.1:8000/tasks/${taskId}`,
         {
           method: "DELETE",
@@ -680,7 +752,7 @@ function App() {
     }
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `http://127.0.0.1:8000/tasks/${editingTask.id}`,
         {
           method: "PUT",
@@ -745,7 +817,7 @@ function App() {
     setCommentsLoading(true);
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `http://127.0.0.1:8000/comments/?task_id=${taskId}`,
         {
           headers: {
@@ -780,7 +852,7 @@ function App() {
     const token = localStorage.getItem("token")
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `http://127.0.0.1:8000/comments/?task_id=${selectedTask.id}`,
         {
           method: "POST",
@@ -834,7 +906,7 @@ function App() {
     const token = localStorage.getItem("token")
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `http://127.0.0.1:8000/comments/${commentId}`,
         {
           method: "DELETE",
@@ -880,7 +952,7 @@ function App() {
 
     const token = localStorage.getItem("token")
 
-    fetch("http://127.0.0.1:8000/projects/", {
+    apiFetch("http://127.0.0.1:8000/projects/", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -908,7 +980,7 @@ function App() {
 
     const token = localStorage.getItem("token")
 
-    fetch("http://127.0.0.1:8000/tasks/", {
+    apiFetch("http://127.0.0.1:8000/tasks/", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -939,7 +1011,7 @@ function App() {
 
     const token = localStorage.getItem("token")
 
-    fetch("http://127.0.0.1:8000/users/", {
+    apiFetch("http://127.0.0.1:8000/users/", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -978,7 +1050,7 @@ function App() {
 
     const token = localStorage.getItem("token")
 
-    fetch(
+    apiFetch(
       `http://127.0.0.1:8000/tasks/?project_id=${selectedProject.id}`,
       {
         headers: {

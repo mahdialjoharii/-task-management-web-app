@@ -5,6 +5,10 @@ from models import user
 from schemas.user import UserCreate, UserResponse
 from auth import hash_password,verify_password, create_access_token, get_current_user
 from fastapi.security import OAuth2PasswordRequestForm
+from datetime import datetime, timezone
+from jose import jwt
+from auth import oauth2_scheme, SECRET_KEY, ALGORITHM
+from models.revoked_token import RevokedToken
 
 router = APIRouter(
     prefix="/users",
@@ -83,7 +87,36 @@ def get_me(user_id: int = Depends(get_current_user)):
     }
 
 @router.post("/logout")
-def logout(user_id: int = Depends(get_current_user)):
+def logout(
+    token: str = Depends(oauth2_scheme),
+    user_id: int = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    payload = jwt.decode(
+        token,
+        SECRET_KEY,
+        algorithms=[ALGORITHM],
+        options={
+            "require_exp": True,
+            "require_jti": True
+        }
+    )
+
+    jti = payload["jti"]
+
+    expires_at = datetime.fromtimestamp(
+        payload["exp"],
+        tz=timezone.utc
+    )
+
+    revoked_token = RevokedToken(
+        jti=jti,
+        expires_at=expires_at
+    )
+
+    db.merge(revoked_token)
+    db.commit()
+
     return {
         "message": "Logged out successfully"
     }
