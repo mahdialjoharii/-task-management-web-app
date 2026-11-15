@@ -266,6 +266,40 @@ function App() {
       return
     }
 
+    if (username.trim().length < 3 || username.trim().length > 30) {
+      setToast({
+        message: "Username must be between 3 and 30 characters",
+        type: "error"
+      })
+      return
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    if (!emailPattern.test(email.trim())) {
+      setToast({
+        message: "Please enter a valid email address",
+        type: "error"
+      })
+      return
+    }
+
+    if (password.length < 8) {
+      setToast({
+        message: "Password must be at least 8 characters",
+        type: "error"
+      })
+      return
+    }
+
+    if (new TextEncoder().encode(password).length > 72) {
+      setToast({
+        message: "Password must not exceed 72 bytes",
+        type: "error"
+      })
+      return
+    }
+
     try {
       const response = await apiFetch("http://127.0.0.1:8000/users/", {
         method: "POST",
@@ -295,8 +329,12 @@ function App() {
         setPassword("")
         setRegisterMode(false)
       } else {
+        const errorMessage = Array.isArray(data.detail)
+          ? data.detail.map((error) => error.msg).join(", ")
+          : data.detail || "Registration failed"
+
         setToast({
-          message: data.detail || "Registration failed",
+          message: errorMessage,
           type: "error"
         })
       }
