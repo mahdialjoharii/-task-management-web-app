@@ -104,9 +104,13 @@ def delete_project(
             status_code=404,
             detail="Project not found"
         )
-    db.query(task.Task).filter(
-    task.Task.project_id == project_id
-).delete()
+    project_tasks = db.query(task.Task).filter(
+       task.Task.project_id == project_id
+    ).all()
+
+    for project_task in project_tasks:
+       db.delete(project_task)
+
     db.delete(existing_project)
     db.commit()
 
